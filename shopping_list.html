@@ -1,0 +1,1393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Meatball – Shopping List</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:           #F97059;
+      --card:         #FFFDF4;
+      --card-alt:     #FFF8E7;
+      --brown-dark:   #4A2C0A;
+      --brown-mid:    #7B3F00;
+      --brown-light:  #C17F24;
+      --cream:        #F5E6C8;
+      --green:        #5A8A3C;
+      --green-light:  #A8D878;
+      --red:          #D94F3B;
+      --orange:       #E07B39;
+      --text:         #2E1A0E;
+      --muted:        #9E7A56;
+      --shadow:       0 4px 16px rgba(0,0,0,.15);
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      min-height: 100vh;
+      padding: 24px;
+      color: var(--text);
+    }
+
+    h1, h2, h3 { font-weight: 800; letter-spacing: .02em; }
+
+    /* ── Page header ──────────────────────────────────────────────── */
+    .page-header {
+      max-width: 1100px;
+      margin: 0 auto 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .page-header h1 { font-size: 24px; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,.2); }
+
+    .nav-links { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .nav-links a {
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      text-decoration: none;
+      background: rgba(255,255,255,.2);
+      padding: 7px 16px;
+      border-radius: 20px;
+      transition: background .2s;
+    }
+    .nav-links a:hover { background: rgba(255,255,255,.35); }
+
+    /* ── Layout ───────────────────────────────────────────────────── */
+    .layout {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 20px;
+    }
+
+    @media (max-width: 800px) {
+      .layout { grid-template-columns: 1fr; }
+    }
+
+    /* ── Cards ────────────────────────────────────────────────────── */
+    .card {
+      background: var(--card);
+      border-radius: 24px;
+      padding: 24px;
+      box-shadow: var(--shadow);
+    }
+
+    .card-title {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: .12em;
+      color: var(--muted);
+      margin-bottom: 16px;
+    }
+
+    /* ── Order moment banner ──────────────────────────────────────── */
+    .moment-banner {
+      max-width: 1100px;
+      margin: 0 auto 20px;
+      border-radius: 20px;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+      box-shadow: var(--shadow);
+    }
+
+    .moment-banner.monday  { background: var(--brown-dark); }
+    .moment-banner.wednesday { background: #1e4d2b; }
+    .moment-banner.other   { background: rgba(255,255,255,.25); }
+
+    .moment-banner .m-left { display: flex; flex-direction: column; gap: 3px; }
+    .moment-banner .m-title { font-size: 15px; font-weight: 800; color: #fff; }
+    .moment-banner .m-sub   { font-size: 12px; color: rgba(255,255,255,.7); }
+
+    .moment-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    /* ── Buttons ──────────────────────────────────────────────────── */
+    .btn {
+      padding: 10px 18px;
+      border: none;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity .2s, transform .1s;
+    }
+    .btn:active { transform: scale(.97); }
+    .btn:disabled { opacity: .4; cursor: not-allowed; }
+
+    .btn-primary  { background: var(--brown-dark); color: #fff; }
+    .btn-green    { background: var(--green); color: #fff; }
+    .btn-orange   { background: var(--orange); color: #fff; }
+    .btn-white    { background: #fff; color: var(--brown-dark); }
+    .btn-ghost    { background: var(--cream); color: var(--brown-dark); }
+    .btn-danger   { background: var(--red); color: #fff; }
+    .btn-lg {
+      padding: 14px 24px;
+      font-size: 15px;
+      border-radius: 16px;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    /* ── Generate triggers ────────────────────────────────────────── */
+    .generate-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    .gen-btn {
+      flex: 1;
+      min-width: 180px;
+      padding: 18px 16px;
+      border: none;
+      border-radius: 18px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 4px;
+      transition: opacity .2s, transform .1s;
+      text-align: left;
+    }
+    .gen-btn:active { transform: scale(.98); }
+    .gen-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+    .gen-btn.full   { background: var(--brown-dark); color: #fff; }
+    .gen-btn.topup  { background: #1e4d2b; color: #fff; }
+
+    .gen-btn .g-icon { font-size: 24px; }
+    .gen-btn .g-title { font-size: 14px; font-weight: 800; }
+    .gen-btn .g-sub   { font-size: 11px; opacity: .75; }
+
+    /* ── Shopping list items ──────────────────────────────────────── */
+    .list-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .list-header h2 { font-size: 16px; color: var(--brown-dark); }
+
+    .list-mode-badge {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      padding: 4px 12px;
+      border-radius: 20px;
+    }
+    .badge-full  { background: var(--cream); color: var(--brown-dark); }
+    .badge-topup { background: #c6f0d0; color: #1e4d2b; }
+
+    .shopping-items { display: flex; flex-direction: column; gap: 8px; }
+
+    .shop-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--card-alt);
+      border-radius: 14px;
+      padding: 10px 14px;
+      transition: opacity .2s;
+    }
+
+    .shop-item.removed { opacity: .35; }
+
+    .shop-item .si-icon { font-size: 22px; flex-shrink: 0; }
+
+    .shop-item .si-info { flex: 1; min-width: 0; }
+    .shop-item .si-name { font-size: 14px; font-weight: 700; color: var(--text); }
+    .shop-item .si-price { font-size: 12px; color: var(--muted); font-weight: 600; margin-top: 1px; }
+
+    .shop-item .si-low-badge {
+      font-size: 10px;
+      font-weight: 700;
+      background: #fde8e4;
+      color: var(--red);
+      padding: 2px 7px;
+      border-radius: 10px;
+      margin-left: 4px;
+    }
+
+    .qty-control {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .qty-btn {
+      width: 26px; height: 26px;
+      border: none;
+      border-radius: 8px;
+      background: var(--cream);
+      color: var(--brown-dark);
+      font-size: 16px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background .15s;
+    }
+    .qty-btn:hover { background: var(--brown-light); color: #fff; }
+
+    .qty-val {
+      font-size: 15px;
+      font-weight: 800;
+      min-width: 28px;
+      text-align: center;
+      color: var(--brown-dark);
+    }
+
+    .remove-item-btn {
+      background: none;
+      border: none;
+      color: var(--red);
+      font-size: 16px;
+      cursor: pointer;
+      padding: 2px 4px;
+      border-radius: 6px;
+      transition: background .15s;
+      flex-shrink: 0;
+    }
+    .remove-item-btn:hover { background: #fde8e4; }
+
+    /* Add custom item row */
+    .add-item-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 14px;
+      flex-wrap: wrap;
+    }
+
+    .add-item-row input {
+      flex: 1;
+      min-width: 140px;
+      padding: 9px 12px;
+      border: 2px solid var(--cream);
+      border-radius: 12px;
+      font-size: 13px;
+      background: var(--card-alt);
+      color: var(--text);
+      outline: none;
+      transition: border-color .2s;
+    }
+    .add-item-row input:focus { border-color: var(--brown-light); }
+
+    .add-item-row button {
+      padding: 9px 14px;
+      background: var(--brown-dark);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    /* Empty state */
+    .list-empty {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--muted);
+    }
+    .list-empty .le-icon { font-size: 48px; margin-bottom: 12px; }
+    .list-empty p { font-size: 14px; font-weight: 600; }
+    .list-empty .le-sub { font-size: 12px; margin-top: 6px; opacity: .8; }
+
+    /* ── Sidebar ──────────────────────────────────────────────────── */
+    .sidebar { display: flex; flex-direction: column; gap: 20px; }
+
+    /* Picnic status card */
+    .picnic-card { display: flex; flex-direction: column; gap: 14px; }
+
+    .picnic-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      background: #00A846;
+      border-radius: 14px;
+      color: #fff;
+    }
+    .picnic-logo .pl-icon { font-size: 24px; }
+    .picnic-logo .pl-title { font-size: 15px; font-weight: 800; }
+    .picnic-logo .pl-sub   { font-size: 11px; opacity: .8; }
+
+    .picnic-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .picnic-status.idle     { background: var(--card-alt); color: var(--muted); }
+    .picnic-status.sending  { background: #EEF6FF; color: #1D4ED8; }
+    .picnic-status.queued   { background: #ECFDF5; color: #065F46; }
+    .picnic-status.error    { background: #FEF2F2; color: #991B1B; }
+
+    /* Order summary */
+    .summary-rows { display: flex; flex-direction: column; gap: 6px; }
+
+    .sum-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      padding: 5px 0;
+      border-bottom: 1px solid var(--cream);
+    }
+    .sum-row:last-child { border-bottom: none; }
+    .sum-row .sr-label { color: var(--muted); font-weight: 600; }
+    .sum-row .sr-val   { font-weight: 800; color: var(--brown-dark); }
+    .sum-row.total .sr-val { color: var(--green); font-size: 16px; }
+    .sum-row.over-budget .sr-val { color: var(--red); }
+
+    /* Inventory status */
+    .inv-status-list { display: flex; flex-direction: column; gap: 6px; }
+
+    .inv-status-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      padding: 6px 10px;
+      background: var(--card-alt);
+      border-radius: 10px;
+    }
+    .inv-status-item .isi-icon { font-size: 16px; }
+    .inv-status-item .isi-name { flex: 1; font-weight: 600; }
+    .isi-badge {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 10px;
+    }
+    .isi-badge.low     { background: #fde8e4; color: var(--red); }
+    .isi-badge.ok      { background: #d1fae5; color: var(--green); }
+    .isi-badge.pending { background: #FDE68A; color: #92400E; }
+
+    /* Confirmed order history */
+    .order-history { display: flex; flex-direction: column; gap: 8px; max-height: 260px; overflow-y: auto; }
+
+    .order-entry {
+      background: var(--card-alt);
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-size: 12px;
+    }
+    .order-entry .oe-header { display: flex; justify-content: space-between; font-weight: 700; margin-bottom: 4px; }
+    .order-entry .oe-type { color: var(--brown-mid); }
+    .order-entry .oe-cost { color: var(--green); }
+    .order-entry .oe-items { color: var(--muted); }
+
+    .order-history-empty { text-align: center; color: var(--muted); font-size: 13px; padding: 16px 0; }
+
+    /* ── Spinner ──────────────────────────────────────────────────── */
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid currentColor;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      flex-shrink: 0;
+      display: inline-block;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Confirm modal ────────────────────────────────────────────── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.55);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .3s;
+    }
+    .modal-overlay.show { opacity: 1; pointer-events: all; }
+
+    .modal {
+      background: var(--card);
+      border-radius: 28px;
+      padding: 28px;
+      max-width: 480px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0,0,0,.3);
+      transform: translateY(24px);
+      transition: transform .3s;
+    }
+    .modal-overlay.show .modal { transform: translateY(0); }
+
+    .modal-icon { font-size: 48px; text-align: center; margin-bottom: 12px; }
+    .modal-title { font-size: 20px; font-weight: 800; color: var(--brown-dark); margin-bottom: 6px; }
+    .modal-sub { font-size: 13px; color: var(--muted); margin-bottom: 20px; line-height: 1.5; }
+
+    .modal-confirm-rows { display: flex; flex-direction: column; gap: 6px; margin-bottom: 20px; }
+
+    .mcr {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 12px;
+      background: var(--card-alt);
+      border-radius: 10px;
+      font-size: 13px;
+    }
+    .mcr .mcr-label { color: var(--muted); font-weight: 600; }
+    .mcr .mcr-val   { font-weight: 800; color: var(--brown-dark); }
+    .mcr.mcr-total .mcr-val { color: var(--green); font-size: 16px; }
+
+    .modal-actions { display: flex; gap: 10px; }
+    .modal-actions .btn { flex: 1; }
+
+    /* ── Toast ────────────────────────────────────────────────────── */
+    #toast {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--brown-dark);
+      color: #fff;
+      padding: 12px 28px;
+      border-radius: 30px;
+      font-weight: 700;
+      font-size: 14px;
+      opacity: 0;
+      transition: opacity .3s, transform .3s;
+      pointer-events: none;
+      z-index: 999;
+      white-space: nowrap;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* ── Attendees bar ────────────────────────────────────────────── */
+    .attendees-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 4px;
+    }
+    .attendees-bar .att-label { font-size: 12px; color: var(--muted); font-weight: 600; }
+    .att-chip {
+      background: var(--cream);
+      color: var(--brown-dark);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 20px;
+    }
+    .att-count {
+      background: var(--brown-light);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 20px;
+    }
+
+    /* divider */
+    .divider { height: 1px; background: var(--cream); margin: 12px 0; }
+  </style>
+</head>
+<body>
+
+<!-- Page header -->
+<div class="page-header">
+  <h1>🛒 Meatball – Shopping List</h1>
+  <div class="nav-links">
+    <a href="budget_tracker.html">💰 Budget</a>
+    <a href="fridge_scanner.html">📸 Fridge Scanner</a>
+  </div>
+</div>
+
+<!-- Order moment banner -->
+<div class="moment-banner" id="moment-banner">
+  <div class="m-left">
+    <div class="m-title" id="moment-title">Loading…</div>
+    <div class="m-sub"   id="moment-sub"></div>
+  </div>
+  <div class="moment-btns" id="moment-btns"></div>
+</div>
+
+<!-- Main layout -->
+<div class="layout">
+
+  <!-- LEFT: Shopping list editor -->
+  <div style="display:flex;flex-direction:column;gap:20px">
+
+    <!-- Generate buttons -->
+    <div class="generate-row">
+      <button class="gen-btn full" onclick="generateList('full')" id="btn-gen-full">
+        <span class="g-icon">📋</span>
+        <span class="g-title">Full Weekly List</span>
+        <span class="g-sub">Monday order – all items needed</span>
+      </button>
+      <button class="gen-btn topup" onclick="generateList('topup')" id="btn-gen-topup">
+        <span class="g-icon">🔁</span>
+        <span class="g-title">Top-Up List</span>
+        <span class="g-sub">Wednesday order – low stock only</span>
+      </button>
+    </div>
+
+    <!-- Shopping list card -->
+    <div class="card">
+      <div class="list-header">
+        <h2 id="list-heading">Shopping List</h2>
+        <span class="list-mode-badge badge-full" id="list-mode-badge" style="display:none"></span>
+      </div>
+
+      <!-- Attendees summary -->
+      <div class="attendees-bar" id="attendees-bar" style="display:none"></div>
+      <div class="divider" id="attendees-divider" style="display:none"></div>
+
+      <!-- Items -->
+      <div id="list-container">
+        <div class="list-empty">
+          <div class="le-icon">🛒</div>
+          <p>No shopping list yet</p>
+          <div class="le-sub">Click "Full Weekly List" or "Top-Up List" above to generate one automatically, or add items manually below.</div>
+        </div>
+      </div>
+
+      <!-- Add custom item -->
+      <div class="add-item-row">
+        <input type="text"   id="inp-custom-name" placeholder="Add item manually…" />
+        <input type="number" id="inp-custom-qty"  placeholder="Qty" min="1" value="1" style="width:70px" />
+        <button onclick="addCustomItem()">+ Add</button>
+      </div>
+    </div>
+
+  </div><!-- /left -->
+
+  <!-- RIGHT: Sidebar -->
+  <div class="sidebar">
+
+    <!-- Picnic integration card -->
+    <div class="card picnic-card">
+      <div class="card-title">Picnic Integration</div>
+
+      <div class="picnic-logo">
+        <div class="pl-icon">🚴</div>
+        <div>
+          <div class="pl-title">Picnic Online Supermarket</div>
+          <div class="pl-sub">Mock integration – simulated API</div>
+        </div>
+      </div>
+
+      <div class="picnic-status idle" id="picnic-status">
+        <span>⚪</span> Not yet sent to Picnic
+      </div>
+
+      <button class="btn btn-green btn-lg" id="btn-send-picnic" onclick="sendToPicnic()" disabled>
+        <span>🚴</span> Send List to Picnic
+      </button>
+
+      <button class="btn btn-primary btn-lg" id="btn-confirm-order" onclick="openConfirmModal()" disabled>
+        <span>✅</span> Confirm & Submit Order
+      </button>
+    </div>
+
+    <!-- Order summary card -->
+    <div class="card">
+      <div class="card-title">Order Summary</div>
+      <div class="summary-rows" id="summary-rows">
+        <div class="sum-row">
+          <span class="sr-label">Items</span>
+          <span class="sr-val" id="sum-items">0</span>
+        </div>
+        <div class="sum-row">
+          <span class="sr-label">Total units</span>
+          <span class="sr-val" id="sum-units">0</span>
+        </div>
+        <div class="sum-row">
+          <span class="sr-label">Estimated cost</span>
+          <span class="sr-val" id="sum-cost">€0.00</span>
+        </div>
+        <div class="sum-row">
+          <span class="sr-label">Weekly budget left</span>
+          <span class="sr-val" id="sum-budget-left">–</span>
+        </div>
+        <div class="sum-row total">
+          <span class="sr-label">After order</span>
+          <span class="sr-val" id="sum-after">€0.00</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Inventory status card -->
+    <div class="card">
+      <div class="card-title">Inventory Status</div>
+      <div id="inv-status-container">
+        <div style="color:var(--muted);font-size:13px">Load inventory from Fridge Scanner to see status.</div>
+      </div>
+    </div>
+
+    <!-- Order history -->
+    <div class="card">
+      <div class="card-title">Order History</div>
+      <div class="order-history" id="order-history">
+        <div class="order-history-empty">No confirmed orders yet.</div>
+      </div>
+    </div>
+
+  </div><!-- /sidebar -->
+</div><!-- /layout -->
+
+<!-- Confirm modal -->
+<div class="modal-overlay" id="confirm-modal">
+  <div class="modal">
+    <div class="modal-icon">✅</div>
+    <div class="modal-title">Confirm Order</div>
+    <div class="modal-sub" id="modal-confirm-sub">
+      Once confirmed, the cost will be recorded against your weekly budget and inventory will be marked as pending restock.
+    </div>
+    <div class="modal-confirm-rows" id="modal-confirm-rows"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeConfirmModal()">Cancel</button>
+      <button class="btn btn-green" onclick="confirmOrder()">Confirm Order 🚀</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+/* ════════════════════════════════════════════════════════════════
+   Constants & catalogue
+   ════════════════════════════════════════════════════════════════ */
+const STORAGE_KEY_INV    = 'meatball_inventory_v1';
+const STORAGE_KEY_BUDGET = 'meatball_budget_v1';
+const STORAGE_KEY_ORDERS = 'meatball_orders_v1';
+
+const LOW_STOCK_THRESHOLD = 2;
+const TOTAL_BUDGET = 120;
+
+/**
+ * Product catalogue – includes mock Picnic prices (EUR) and
+ * a daily-per-person consumption rate used for full-list generation.
+ */
+const CATALOGUE = [
+  { name: 'Bread',        emoji: '🍞', price: 2.29, dailyPP: 0.50 },
+  { name: 'Cheese',       emoji: '🧀', price: 3.49, dailyPP: 0.30 },
+  { name: 'Ham',          emoji: '🥩', price: 2.49, dailyPP: 0.25 },
+  { name: 'Grill Sausage',emoji: '🌭', price: 2.99, dailyPP: 0.20 },
+  { name: 'Butter',       emoji: '🧈', price: 1.89, dailyPP: 0.15 },
+  { name: 'Tomato',       emoji: '🍅', price: 1.29, dailyPP: 0.40 },
+  { name: 'Cucumber',     emoji: '🥒', price: 0.79, dailyPP: 0.30 },
+  { name: 'Lettuce',      emoji: '🥬', price: 1.49, dailyPP: 0.30 },
+  { name: 'Bell Pepper',  emoji: '🫑', price: 0.99, dailyPP: 0.20 },
+  { name: 'Carrot',       emoji: '🥕', price: 0.89, dailyPP: 0.15 },
+  { name: 'Apple',        emoji: '🍎', price: 0.49, dailyPP: 0.40 },
+  { name: 'Banana',       emoji: '🍌', price: 1.29, dailyPP: 0.30 },
+  { name: 'Orange',       emoji: '🍊', price: 0.59, dailyPP: 0.20 },
+  { name: 'Milk',         emoji: '🥛', price: 1.09, dailyPP: 0.20 },
+  { name: 'Yogurt',       emoji: '🍶', price: 0.89, dailyPP: 0.20 },
+  { name: 'Eggs',         emoji: '🥚', price: 2.99, dailyPP: 0.15 },
+  { name: 'Hummus',       emoji: '🫙', price: 2.19, dailyPP: 0.15 },
+  { name: 'Juice',        emoji: '🧃', price: 1.99, dailyPP: 0.25 },
+  { name: 'Water',        emoji: '💧', price: 0.99, dailyPP: 0.50 },
+  { name: 'Soft Drink',   emoji: '🥤', price: 1.49, dailyPP: 0.15 },
+];
+
+/* ════════════════════════════════════════════════════════════════
+   State
+   ════════════════════════════════════════════════════════════════ */
+let shoppingItems = [];   // [{ id, name, emoji, qty, price, isLow, removed }]
+let listMode      = null; // 'full' | 'topup' | null
+let picnicStatus  = 'idle'; // 'idle' | 'sending' | 'queued'
+let inventory     = [];   // from localStorage
+let budgetState   = null; // from localStorage
+let orderHistory  = [];   // confirmed orders
+
+/* ════════════════════════════════════════════════════════════════
+   Init
+   ════════════════════════════════════════════════════════════════ */
+function init() {
+  loadInventory();
+  loadBudgetState();
+  loadOrderHistory();
+  updateMomentBanner();
+  renderInventoryStatus();
+  renderSummary();
+  renderOrderHistory();
+
+  document.getElementById('inp-custom-name').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addCustomItem();
+  });
+  document.getElementById('inp-custom-qty').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addCustomItem();
+  });
+}
+
+/* ════════════════════════════════════════════════════════════════
+   Data loading
+   ════════════════════════════════════════════════════════════════ */
+function loadInventory() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_INV);
+    if (raw) { inventory = JSON.parse(raw); return; }
+  } catch(e) {}
+  // Default demo inventory
+  inventory = [
+    { id: 1, name: 'Cheese',        emoji: '🧀', qty: 3 },
+    { id: 2, name: 'Grill Sausage', emoji: '🌭', qty: 5 },
+    { id: 3, name: 'Cucumber',      emoji: '🥒', qty: 2 },
+    { id: 4, name: 'Bread',         emoji: '🍞', qty: 1 },
+    { id: 5, name: 'Milk',          emoji: '🥛', qty: 1 },
+  ];
+}
+
+function loadBudgetState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_BUDGET);
+    if (raw) { budgetState = JSON.parse(raw); return; }
+  } catch(e) {}
+  budgetState = null;
+}
+
+function loadOrderHistory() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_ORDERS);
+    if (raw) { orderHistory = JSON.parse(raw); return; }
+  } catch(e) {}
+  orderHistory = [];
+}
+
+function saveOrderHistory() {
+  localStorage.setItem(STORAGE_KEY_ORDERS, JSON.stringify(orderHistory));
+}
+
+function saveInventory() {
+  localStorage.setItem(STORAGE_KEY_INV, JSON.stringify(inventory));
+}
+
+/* ════════════════════════════════════════════════════════════════
+   Moment banner (Monday / Wednesday / other day)
+   ════════════════════════════════════════════════════════════════ */
+function updateMomentBanner() {
+  const banner  = document.getElementById('moment-banner');
+  const title   = document.getElementById('moment-title');
+  const sub     = document.getElementById('moment-sub');
+  const btns    = document.getElementById('moment-btns');
+
+  const now     = new Date();
+  const dayNum  = now.getDay(); // 0=Sun,1=Mon,2=Tue,3=Wed,...
+  const timeStr = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  const dateStr = now.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+
+  if (dayNum === 1) {
+    // Monday – full order
+    banner.className = 'moment-banner monday';
+    title.textContent = '📋 Monday Order Moment';
+    sub.textContent   = `${dateStr} · ${timeStr} — Generate the full weekly shopping list now.`;
+    btns.innerHTML    = `<button class="btn btn-white" onclick="generateList('full')">🚀 Generate Full List</button>`;
+  } else if (dayNum === 3) {
+    // Wednesday – top-up
+    banner.className = 'moment-banner wednesday';
+    title.textContent = '🔁 Wednesday Top-Up Moment';
+    sub.textContent   = `${dateStr} · ${timeStr} — Generate a top-up list for low-stock items.`;
+    btns.innerHTML    = `<button class="btn btn-white" onclick="generateList('topup')">🔁 Generate Top-Up List</button>`;
+  } else {
+    // Other day
+    const nextMonday = daysUntil(1, now);
+    const nextWed    = daysUntil(3, now);
+    banner.className = 'moment-banner other';
+    title.textContent = `📅 ${dateStr}`;
+    sub.textContent   = `Next Monday order in ${nextMonday}d · Next Wednesday top-up in ${nextWed}d. You can still generate manually below.`;
+    btns.innerHTML    = '';
+  }
+}
+
+function daysUntil(targetDay, from) {
+  const current = from.getDay();
+  let diff = targetDay - current;
+  if (diff <= 0) diff += 7;
+  return diff;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   Attendance helpers
+   ════════════════════════════════════════════════════════════════ */
+function getWeeklyAttendees() {
+  if (!budgetState || !budgetState.officeAttendance) {
+    // No budget data: assume 5 people, 5 days = 25 person-days
+    return { total: 25, perDay: { Mon: 5, Tue: 5, Wed: 5, Thu: 5, Fri: 5 }, names: [] };
+  }
+  const attendance = budgetState.officeAttendance;
+  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+  const perDay = {};
+  let total = 0;
+  const presentNames = new Set();
+
+  days.forEach(day => {
+    const count = attendance.filter(a => a.day === day && a.present).length;
+    perDay[day] = count;
+    total += count;
+    attendance.filter(a => a.day === day && a.present).forEach(a => presentNames.add(a.name));
+  });
+
+  return { total, perDay, names: [...presentNames] };
+}
+
+/* ════════════════════════════════════════════════════════════════
+   List generation
+   ════════════════════════════════════════════════════════════════ */
+function generateList(mode) {
+  listMode = mode;
+  picnicStatus = 'idle';
+  updatePicnicStatusUI();
+
+  const att = getWeeklyAttendees();
+
+  if (mode === 'full') {
+    generateFullList(att);
+  } else {
+    generateTopUpList(att);
+  }
+
+  renderAttendees(att);
+  renderList();
+  renderSummary();
+  updateActionButtons();
+
+  const label = mode === 'full' ? 'Full weekly list' : 'Top-up list';
+  toast(`${label} generated! Review and adjust before sending.`);
+}
+
+function generateFullList(att) {
+  shoppingItems = [];
+
+  CATALOGUE.forEach(product => {
+    // Calculate total units needed for the week
+    const weeklyNeed = Math.ceil(product.dailyPP * att.total);
+
+    // Subtract current stock
+    const inStock = getStockQty(product.name);
+    const toOrder = Math.max(0, weeklyNeed - inStock);
+
+    if (toOrder > 0) {
+      shoppingItems.push(makeShopItem(product, toOrder, false));
+    }
+  });
+
+  // Also add any inventory items that are critically low (even if not in catalogue)
+  inventory.forEach(invItem => {
+    if (invItem.qty <= LOW_STOCK_THRESHOLD) {
+      const alreadyIn = shoppingItems.find(s => normName(s.name) === normName(invItem.name));
+      if (!alreadyIn) {
+        const cat = findCatalogue(invItem.name);
+        const qty = cat ? Math.max(1, Math.ceil(cat.dailyPP * att.total)) : 2;
+        shoppingItems.push(makeShopItem(
+          { name: invItem.name, emoji: invItem.emoji, price: cat ? cat.price : 1.99 },
+          qty,
+          true
+        ));
+      }
+    }
+  });
+}
+
+function generateTopUpList(att) {
+  shoppingItems = [];
+
+  // Top-up: only items that are running low
+  inventory.forEach(invItem => {
+    if (invItem.qty <= LOW_STOCK_THRESHOLD) {
+      const cat = findCatalogue(invItem.name);
+      // Order enough to last the remaining week (roughly 3 days from Wed)
+      const partialAtt = Math.ceil(att.total * 0.6); // ~3 of 5 days
+      const qty = cat ? Math.max(1, Math.ceil(cat.dailyPP * partialAtt) - invItem.qty) : 2;
+
+      shoppingItems.push(makeShopItem(
+        {
+          name:  invItem.name,
+          emoji: invItem.emoji,
+          price: cat ? cat.price : 1.99,
+        },
+        Math.max(1, qty),
+        true
+      ));
+    }
+  });
+
+  if (shoppingItems.length === 0) {
+    toast('All stock looks good! No top-up needed right now.');
+  }
+}
+
+function makeShopItem(product, qty, isLow) {
+  return {
+    id:      Date.now() + Math.random(),
+    name:    product.name,
+    emoji:   product.emoji || '📦',
+    qty,
+    price:   product.price || 1.99,
+    isLow,
+    removed: false,
+  };
+}
+
+/* ════════════════════════════════════════════════════════════════
+   Render: Shopping list
+   ════════════════════════════════════════════════════════════════ */
+function renderList() {
+  const container = document.getElementById('list-container');
+  const badge     = document.getElementById('list-mode-badge');
+  const heading   = document.getElementById('list-heading');
+
+  if (listMode === 'full') {
+    heading.textContent = '📋 Full Weekly Shopping List';
+    badge.textContent   = '📋 Full – Monday Order';
+    badge.className     = 'list-mode-badge badge-full';
+    badge.style.display = 'inline-block';
+  } else if (listMode === 'topup') {
+    heading.textContent = '🔁 Top-Up Shopping List';
+    badge.textContent   = '🔁 Top-Up – Wednesday Order';
+    badge.className     = 'list-mode-badge badge-topup';
+    badge.style.display = 'inline-block';
+  } else {
+    badge.style.display = 'none';
+  }
+
+  const visible = shoppingItems.filter(i => !i.removed);
+
+  if (shoppingItems.length === 0 && listMode === null) {
+    container.innerHTML = `
+      <div class="list-empty">
+        <div class="le-icon">🛒</div>
+        <p>No shopping list yet</p>
+        <div class="le-sub">Click "Full Weekly List" or "Top-Up List" above to generate one automatically, or add items manually below.</div>
+      </div>`;
+    return;
+  }
+
+  if (shoppingItems.length === 0 || visible.length === 0) {
+    container.innerHTML = `
+      <div class="list-empty">
+        <div class="le-icon">✅</div>
+        <p>All clear – nothing to order!</p>
+        <div class="le-sub">Inventory looks good based on expected attendance.</div>
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = `<div class="shopping-items">${
+    shoppingItems.map(item => `
+      <div class="shop-item ${item.removed ? 'removed' : ''}" id="shop-item-${item.id}">
+        <span class="si-icon">${item.emoji}</span>
+        <div class="si-info">
+          <div class="si-name">
+            ${escHtml(item.name)}
+            ${item.isLow ? '<span class="si-low-badge">⚠️ Low</span>' : ''}
+          </div>
+          <div class="si-price">€${item.price.toFixed(2)} / unit · subtotal: €${(item.price * item.qty).toFixed(2)}</div>
+        </div>
+        <div class="qty-control">
+          <button class="qty-btn" onclick="adjustQty('${item.id}', -1)" ${item.removed ? 'disabled' : ''}>−</button>
+          <span class="qty-val" id="qv-${item.id}">${item.qty}</span>
+          <button class="qty-btn" onclick="adjustQty('${item.id}', +1)" ${item.removed ? 'disabled' : ''}>+</button>
+        </div>
+        <button class="remove-item-btn" onclick="toggleRemove('${item.id}')" title="${item.removed ? 'Restore item' : 'Remove item'}">
+          ${item.removed ? '↩️' : '✕'}
+        </button>
+      </div>`).join('')
+  }</div>`;
+}
+
+function renderAttendees(att) {
+  const bar     = document.getElementById('attendees-bar');
+  const divider = document.getElementById('attendees-divider');
+
+  if (!att) { bar.style.display = 'none'; divider.style.display = 'none'; return; }
+
+  bar.style.display     = 'flex';
+  divider.style.display = 'block';
+
+  const chips = att.names.length > 0
+    ? att.names.map(n => `<span class="att-chip">${n}</span>`).join('')
+    : '<span class="att-chip">Team</span>';
+
+  bar.innerHTML = `
+    <span class="att-label">This week:</span>
+    ${chips}
+    <span class="att-count">👥 ${att.total} person-days</span>`;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   Item interactions
+   ════════════════════════════════════════════════════════════════ */
+function adjustQty(id, delta) {
+  const item = shoppingItems.find(i => String(i.id) === String(id));
+  if (!item || item.removed) return;
+  item.qty = Math.max(1, item.qty + delta);
+  document.getElementById(`qv-${id}`).textContent = item.qty;
+  // Update subtotal
+  const el = document.getElementById(`shop-item-${id}`);
+  if (el) {
+    const priceEl = el.querySelector('.si-price');
+    if (priceEl) priceEl.textContent = `€${item.price.toFixed(2)} / unit · subtotal: €${(item.price * item.qty).toFixed(2)}`;
+  }
+  renderSummary();
+}
+
+function toggleRemove(id) {
+  const item = shoppingItems.find(i => String(i.id) === String(id));
+  if (!item) return;
+  item.removed = !item.removed;
+  renderList();
+  renderSummary();
+  picnicStatus = 'idle';
+  updatePicnicStatusUI();
+  updateActionButtons();
+}
+
+function addCustomItem() {
+  const nameEl = document.getElementById('inp-custom-name');
+  const qtyEl  = document.getElementById('inp-custom-qty');
+  const name   = nameEl.value.trim();
+  const qty    = Math.max(1, parseInt(qtyEl.value) || 1);
+
+  if (!name) { toast('Please enter an item name.'); return; }
+
+  const cat = findCatalogue(name);
+  shoppingItems.push({
+    id:      Date.now() + Math.random(),
+    name:    cat ? cat.name : name,
+    emoji:   cat ? cat.emoji : '📦',
+    qty,
+    price:   cat ? cat.price : 1.99,
+    isLow:   false,
+    removed: false,
+  });
+
+  nameEl.value = '';
+  qtyEl.value  = '1';
+  nameEl.focus();
+
+  if (listMode === null) listMode = 'full'; // initialise list mode if no list yet
+  renderList();
+  renderSummary();
+  updateActionButtons();
+  toast(`"${name}" added to list.`);
+}
+
+/* ════════════════════════════════════════════════════════════════
+   Render: Summary sidebar
+   ════════════════════════════════════════════════════════════════ */
+function renderSummary() {
+  const active = shoppingItems.filter(i => !i.removed);
+  const items  = active.length;
+  const units  = active.reduce((s, i) => s + i.qty, 0);
+  const cost   = active.reduce((s, i) => s + i.price * i.qty, 0);
+
+  document.getElementById('sum-items').textContent = items;
+  document.getElementById('sum-units').textContent = units;
+  document.getElementById('sum-cost').textContent  = fmtEur(cost);
+
+  // Budget remaining
+  const spent     = budgetState ? budgetState.purchases.reduce((s, p) => s + p.amount, 0) : 0;
+  const remaining = TOTAL_BUDGET - spent;
+  const after     = remaining - cost;
+
+  document.getElementById('sum-budget-left').textContent = budgetState ? fmtEur(remaining) : '–';
+
+  const afterEl = document.getElementById('sum-after');
+  afterEl.textContent = budgetState ? fmtEur(after) : '–';
+  afterEl.style.color = after < 0 ? 'var(--red)' : 'var(--green)';
+
+  // Mark over-budget
+  const sumAfterRow = afterEl.closest('.sum-row');
+  if (sumAfterRow) {
+    sumAfterRow.classList.toggle('over-budget', after < 0 && !!budgetState);
+    sumAfterRow.classList.toggle('total', after >= 0 || !budgetState);
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   Render: Inventory status
+   ════════════════════════════════════════════════════════════════ */
+function renderInventoryStatus() {
+  const container = document.getElementById('inv-status-container');
+
+  if (inventory.length === 0) {
+    container.innerHTML = `<div style="color:var(--muted);font-size:13px">No inventory data. Use the Fridge Scanner to scan your fridge.</div>`;
+    return;
+  }
+
+  const sorted = [...inventory].sort((a, b) => a.qty - b.qty);
+
+  container.innerHTML = `<div class="inv-status-list">${
+    sorted.map(item => {
+      const isLow     = item.qty <= LOW_STOCK_THRESHOLD;
+      const isPending = item.pendingRestock;
+      const badgeClass = isPending ? 'pending' : (isLow ? 'low' : 'ok');
+      const badgeText  = isPending ? '⏳ Ordered' : (isLow ? '⚠️ Low' : '✅ OK');
+      return `
+        <div class="inv-status-item">
+          <span class="isi-icon">${item.emoji || '📦'}</span>
+          <span class="isi-name">${escHtml(item.name)}</span>
+          <span style="font-size:12px;font-weight:700;color:var(--muted);margin-right:4px">${item.qty}</span>
+          <span class="isi-badge ${badgeClass}">${badgeText}</span>
+        </div>`;
+    }).join('')
+  }</div>`;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   Render: Order history
+   ════════════════════════════════════════════════════════════════ */
+function renderOrderHistory() {
+  const container = document.getElementById('order-history');
+
+  if (orderHistory.length === 0) {
+    container.innerHTML = '<div class="order-history-empty">No confirmed orders yet.</div>';
+    return;
+  }
+
+  container.innerHTML = orderHistory.map(o => `
+    <div class="order-entry">
+      <div class="oe-header">
+        <span class="oe-type">${o.type === 'full' ? '📋 Full Order' : '🔁 Top-Up'} · ${o.date}</span>
+        <span class="oe-cost">${fmtEur(o.cost)}</span>
+      </div>
+      <div class="oe-items">${o.items} item type${o.items !== 1 ? 's' : ''} · ${o.units} unit${o.units !== 1 ? 's' : ''}</div>
+    </div>`).join('');
+}
+
+/* ════════════════════════════════════════════════════════════════
+   Picnic integration (mock)
+   ════════════════════════════════════════════════════════════════ */
+function sendToPicnic() {
+  const active = shoppingItems.filter(i => !i.removed);
+  if (active.length === 0) { toast('Nothing in the list to send!'); return; }
+
+  picnicStatus = 'sending';
+  updatePicnicStatusUI();
+
+  const sendBtn = document.getElementById('btn-send-picnic');
+  sendBtn.disabled = true;
+
+  // Mock API call – simulate network delay
+  setTimeout(() => {
+    picnicStatus = 'queued';
+    updatePicnicStatusUI();
+    sendBtn.disabled = false;
+
+    // Enable confirm button
+    document.getElementById('btn-confirm-order').disabled = false;
+
+    toast('✅ Shopping list queued in Picnic! Review and confirm to submit.');
+  }, 1800);
+}
+
+function updatePicnicStatusUI() {
+  const el = document.getElementById('picnic-status');
+
+  const statusMap = {
+    idle:    { cls: 'idle',    html: '⚪ Not yet sent to Picnic' },
+    sending: { cls: 'sending', html: '<span class="spinner"></span> Sending list to Picnic…' },
+    queued:  { cls: 'queued',  html: '✅ Queued in Picnic – awaiting confirmation' },
+    error:   { cls: 'error',   html: '❌ Failed to send – please retry' },
+  };
+
+  const s = statusMap[picnicStatus] || statusMap.idle;
+  el.className = `picnic-status ${s.cls}`;
+  el.innerHTML = s.html;
+}
+
+function updateActionButtons() {
+  const active = shoppingItems.filter(i => !i.removed);
+  const hasItems = active.length > 0;
+
+  document.getElementById('btn-send-picnic').disabled    = !hasItems;
+  document.getElementById('btn-confirm-order').disabled  = picnicStatus !== 'queued' || !hasItems;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   Confirm order modal
+   ════════════════════════════════════════════════════════════════ */
+function openConfirmModal() {
+  const active = shoppingItems.filter(i => !i.removed);
+  const cost   = active.reduce((s, i) => s + i.price * i.qty, 0);
+  const units  = active.reduce((s, i) => s + i.qty, 0);
+  const spent  = budgetState ? budgetState.purchases.reduce((s, p) => s + p.amount, 0) : 0;
+  const remaining = TOTAL_BUDGET - spent;
+  const after     = remaining - cost;
+
+  const rows = document.getElementById('modal-confirm-rows');
+  rows.innerHTML = `
+    <div class="mcr">
+      <span class="mcr-label">List type</span>
+      <span class="mcr-val">${listMode === 'full' ? '📋 Full Weekly Order' : '🔁 Wednesday Top-Up'}</span>
+    </div>
+    <div class="mcr">
+      <span class="mcr-label">Items ordered</span>
+      <span class="mcr-val">${active.length} products · ${units} units</span>
+    </div>
+    <div class="mcr">
+      <span class="mcr-label">Order cost</span>
+      <span class="mcr-val">${fmtEur(cost)}</span>
+    </div>
+    ${budgetState ? `
+    <div class="mcr">
+      <span class="mcr-label">Budget remaining</span>
+      <span class="mcr-val">${fmtEur(remaining)}</span>
+    </div>
+    <div class="mcr mcr-total">
+      <span class="mcr-label">Budget after order</span>
+      <span class="mcr-val" style="color:${after < 0 ? 'var(--red)' : 'var(--green)'}">${fmtEur(after)}</span>
+    </div>` : ''}
+    <div class="mcr">
+      <span class="mcr-label">Inventory</span>
+      <span class="mcr-val">Will be marked as pending restock</span>
+    </div>`;
+
+  document.getElementById('confirm-modal').classList.add('show');
+}
+
+function closeConfirmModal() {
+  document.getElementById('confirm-modal').classList.remove('show');
+}
+
+function confirmOrder() {
+  const active = shoppingItems.filter(i => !i.removed);
+  const cost   = active.reduce((s, i) => s + i.price * i.qty, 0);
+  const units  = active.reduce((s, i) => s + i.qty, 0);
+
+  // 1. Record cost against weekly budget
+  if (budgetState) {
+    budgetState.purchases.push({
+      id:     Date.now(),
+      name:   listMode === 'full' ? 'Full Weekly Grocery Order (Picnic)' : 'Top-Up Grocery Order (Picnic)',
+      amount: parseFloat(cost.toFixed(2)),
+    });
+    localStorage.setItem(STORAGE_KEY_BUDGET, JSON.stringify(budgetState));
+  }
+
+  // 2. Mark inventory items as pending restock
+  active.forEach(shopItem => {
+    const invItem = inventory.find(i => normName(i.name) === normName(shopItem.name));
+    if (invItem) {
+      invItem.pendingRestock = true;
+    } else {
+      // Add new entry as pending
+      inventory.push({
+        id:             Date.now() + Math.random(),
+        name:           shopItem.name,
+        emoji:          shopItem.emoji,
+        qty:            0,
+        pendingRestock: true,
+      });
+    }
+  });
+  saveInventory();
+
+  // 3. Add to order history
+  const now = new Date();
+  orderHistory.unshift({
+    type:  listMode || 'full',
+    date:  now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
+    time:  now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+    items: active.length,
+    units,
+    cost:  parseFloat(cost.toFixed(2)),
+  });
+  saveOrderHistory();
+
+  // 4. Reset list & UI
+  shoppingItems = [];
+  listMode      = null;
+  picnicStatus  = 'idle';
+
+  closeConfirmModal();
+  renderList();
+  renderSummary();
+  renderInventoryStatus();
+  renderOrderHistory();
+  updatePicnicStatusUI();
+  updateActionButtons();
+
+  toast(`🎉 Order confirmed! ${fmtEur(cost)} recorded to weekly budget.`);
+}
+
+/* ════════════════════════════════════════════════════════════════
+   Helpers
+   ════════════════════════════════════════════════════════════════ */
+function getStockQty(name) {
+  const item = inventory.find(i => normName(i.name) === normName(name));
+  return item ? item.qty : 0;
+}
+
+function findCatalogue(name) {
+  const lower = name.toLowerCase().trim();
+  return CATALOGUE.find(c =>
+    c.name.toLowerCase() === lower ||
+    lower.includes(c.name.toLowerCase()) ||
+    c.name.toLowerCase().includes(lower)
+  ) || null;
+}
+
+function normName(n) {
+  return (n || '').toLowerCase().trim();
+}
+
+function fmtEur(n) {
+  return '€' + parseFloat(n).toFixed(2);
+}
+
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/* ── Toast ──────────────────────────────────────────────────────────── */
+let toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 3400);
+}
+
+/* ════════════════════════════════════════════════════════════════
+   Boot
+   ════════════════════════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
