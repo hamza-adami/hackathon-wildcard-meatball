@@ -1,0 +1,1779 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Meatball – Team Calendar & Attendance</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:           #F97059;
+      --card:         #FFFDF4;
+      --card-alt:     #FFF8E7;
+      --brown-dark:   #4A2C0A;
+      --brown-mid:    #7B3F00;
+      --brown-light:  #C17F24;
+      --cream:        #F5E6C8;
+      --green:        #5A8A3C;
+      --green-light:  #A8D878;
+      --red:          #D94F3B;
+      --orange:       #E07B39;
+      --blue:         #2563EB;
+      --blue-light:   #DBEAFE;
+      --yellow:       #F59E0B;
+      --yellow-light: #FEF3C7;
+      --text:         #2E1A0E;
+      --muted:        #9E7A56;
+      --shadow:       0 4px 16px rgba(0,0,0,.15);
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      min-height: 100vh;
+      padding: 24px;
+      color: var(--text);
+    }
+
+    h1, h2, h3 { font-weight: 800; letter-spacing: .02em; }
+
+    /* ── Page header ──────────────────────────────────────────────── */
+    .page-header {
+      max-width: 1100px;
+      margin: 0 auto 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .page-header h1 { font-size: 24px; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,.2); }
+
+    .nav-links { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .nav-links a {
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      text-decoration: none;
+      background: rgba(255,255,255,.2);
+      padding: 7px 16px;
+      border-radius: 20px;
+      transition: background .2s;
+    }
+    .nav-links a:hover { background: rgba(255,255,255,.35); }
+
+    /* ── Auth bar ─────────────────────────────────────────────────── */
+    .auth-bar {
+      max-width: 1100px;
+      margin: 0 auto 16px;
+      background: var(--brown-dark);
+      border-radius: 20px;
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      box-shadow: var(--shadow);
+    }
+
+    .auth-bar label {
+      font-size: 12px;
+      font-weight: 700;
+      color: rgba(255,255,255,.7);
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      white-space: nowrap;
+    }
+
+    .auth-bar input {
+      flex: 1;
+      min-width: 200px;
+      padding: 8px 14px;
+      border-radius: 12px;
+      border: none;
+      font-size: 13px;
+      background: rgba(255,255,255,.12);
+      color: #fff;
+      outline: none;
+      font-family: monospace;
+    }
+    .auth-bar input::placeholder { color: rgba(255,255,255,.4); }
+    .auth-bar input:focus { background: rgba(255,255,255,.2); }
+
+    .auth-status {
+      font-size: 12px;
+      font-weight: 700;
+      padding: 5px 12px;
+      border-radius: 20px;
+      white-space: nowrap;
+    }
+    .auth-status.connected  { background: var(--green);  color: #fff; }
+    .auth-status.warning    { background: var(--yellow);  color: #4A2C0A; }
+    .auth-status.error      { background: var(--red);    color: #fff; }
+    .auth-status.idle       { background: rgba(255,255,255,.15); color: rgba(255,255,255,.8); }
+
+    /* ── Change banner ────────────────────────────────────────────── */
+    .change-banner {
+      max-width: 1100px;
+      margin: 0 auto 16px;
+      background: var(--yellow-light);
+      border: 2px solid var(--yellow);
+      border-radius: 16px;
+      padding: 14px 20px;
+      display: none;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+    .change-banner.show { display: flex; }
+    .change-banner .banner-text { flex: 1; font-size: 14px; font-weight: 700; color: #92400E; }
+    .change-banner .banner-text span { font-weight: 400; display: block; font-size: 12px; margin-top: 2px; }
+
+    /* ── Warning banner ───────────────────────────────────────────── */
+    .fallback-banner {
+      max-width: 1100px;
+      margin: 0 auto 16px;
+      background: #FEF2F2;
+      border: 2px solid var(--red);
+      border-radius: 16px;
+      padding: 14px 20px;
+      display: none;
+      align-items: center;
+      gap: 12px;
+    }
+    .fallback-banner.show { display: flex; }
+    .fallback-banner .banner-icon { font-size: 22px; flex-shrink: 0; }
+    .fallback-banner .banner-text { font-size: 13px; font-weight: 700; color: #991B1B; }
+    .fallback-banner .banner-text span { font-weight: 400; display: block; margin-top: 2px; }
+
+    /* ── Layout ───────────────────────────────────────────────────── */
+    .layout {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 20px;
+    }
+
+    @media (max-width: 860px) {
+      .layout { grid-template-columns: 1fr; }
+    }
+
+    .col-left  { display: flex; flex-direction: column; gap: 20px; }
+    .col-right { display: flex; flex-direction: column; gap: 20px; }
+
+    /* ── Card ─────────────────────────────────────────────────────── */
+    .card {
+      background: var(--card);
+      border-radius: 24px;
+      padding: 24px;
+      box-shadow: var(--shadow);
+    }
+
+    .card-title {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: .12em;
+      color: var(--muted);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* ── Buttons ──────────────────────────────────────────────────── */
+    .btn {
+      padding: 9px 16px;
+      border: none;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity .2s, transform .1s;
+      white-space: nowrap;
+    }
+    .btn:active { transform: scale(.96); }
+    .btn:disabled { opacity: .4; cursor: not-allowed; }
+    .btn-primary  { background: var(--brown-dark); color: #fff; }
+    .btn-ghost    { background: var(--cream); color: var(--brown-dark); }
+    .btn-green    { background: var(--green); color: #fff; }
+    .btn-red      { background: var(--red);   color: #fff; }
+    .btn-sm { padding: 5px 10px; font-size: 11px; border-radius: 8px; }
+
+    /* ── Attendance grid ──────────────────────────────────────────── */
+    .grid-scroll { overflow-x: auto; }
+
+    .att-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      min-width: 480px;
+    }
+
+    .att-table th {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      color: var(--muted);
+      padding: 6px 8px;
+      text-align: center;
+    }
+
+    .att-table th.person-col { text-align: left; min-width: 110px; }
+
+    .att-table td {
+      padding: 5px 8px;
+      text-align: center;
+      vertical-align: middle;
+    }
+
+    .att-table td.person-cell {
+      text-align: left;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--brown-dark);
+    }
+
+    .person-cell-inner {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .person-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .att-toggle {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      border: 2px solid transparent;
+      cursor: pointer;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto;
+      transition: background .15s, transform .1s, border-color .15s;
+    }
+    .att-toggle:active { transform: scale(.9); }
+
+    .att-toggle.present {
+      background: #ECFDF5;
+      border-color: var(--green);
+    }
+    .att-toggle.absent {
+      background: #F3F4F6;
+      border-color: #D1D5DB;
+      opacity: .5;
+    }
+    .att-toggle.wfh {
+      background: var(--yellow-light);
+      border-color: var(--yellow);
+    }
+    .att-toggle.today {
+      box-shadow: 0 0 0 3px rgba(197,160,75,.4);
+    }
+
+    /* Day count row */
+    .count-row td {
+      padding-top: 10px;
+      border-top: 2px solid var(--cream);
+    }
+
+    .day-count-badge {
+      display: inline-block;
+      background: var(--brown-dark);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 800;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      line-height: 34px;
+      text-align: center;
+    }
+
+    .day-count-badge.today-badge {
+      background: var(--green);
+    }
+
+    /* ── Day header cell ──────────────────────────────────────────── */
+    .day-header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
+    .day-header .dh-name { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; }
+    .day-header .dh-date { font-size: 10px; color: var(--muted); }
+    .day-header.today-col .dh-name { color: var(--green); }
+
+    /* ── Sync row ─────────────────────────────────────────────────── */
+    .sync-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 16px;
+      padding-top: 14px;
+      border-top: 2px solid var(--cream);
+    }
+
+    .sync-info {
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .spinner-inline {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid var(--cream);
+      border-top-color: var(--brown-light);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      vertical-align: middle;
+      margin-right: 4px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Calendar events log ──────────────────────────────────────── */
+    .events-list { display: flex; flex-direction: column; gap: 8px; }
+
+    .event-day-block { }
+
+    .event-day-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .event-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 7px 10px;
+      background: var(--card-alt);
+      border-radius: 10px;
+      font-size: 12px;
+    }
+
+    .event-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      margin-top: 3px;
+    }
+    .dot-ooo  { background: var(--red); }
+    .dot-wfh  { background: var(--yellow); }
+    .dot-other { background: var(--brown-light); }
+
+    .event-name { font-weight: 700; color: var(--brown-dark); }
+    .event-time { color: var(--muted); margin-top: 1px; }
+
+    /* ── Team config ──────────────────────────────────────────────── */
+    .team-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+
+    .team-member-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--card-alt);
+      padding: 8px 12px;
+      border-radius: 12px;
+    }
+
+    .team-member-row .tm-emoji { font-size: 20px; flex-shrink: 0; }
+    .team-member-row .tm-name { flex: 1; font-size: 13px; font-weight: 700; }
+    .team-member-row .tm-email { flex: 2; font-size: 11px; color: var(--muted); font-family: monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .team-member-row .tm-remove { background: none; border: none; color: var(--red); cursor: pointer; font-size: 14px; padding: 2px 4px; border-radius: 6px; }
+    .team-member-row .tm-remove:hover { background: #fde8e4; }
+
+    .add-team-form { display: flex; gap: 8px; flex-wrap: wrap; }
+    .add-team-form input {
+      flex: 1;
+      min-width: 120px;
+      padding: 8px 12px;
+      border: 2px solid var(--cream);
+      border-radius: 10px;
+      font-size: 13px;
+      background: var(--card-alt);
+      color: var(--text);
+      outline: none;
+    }
+    .add-team-form input:focus { border-color: var(--brown-light); }
+
+    /* ── Summary card ─────────────────────────────────────────────── */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .summary-day {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .summary-day .sd-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+    }
+
+    .summary-day .sd-count {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: 900;
+      color: #fff;
+      background: var(--brown-mid);
+      transition: background .3s;
+    }
+
+    .summary-day .sd-count.today { background: var(--green); }
+    .summary-day .sd-count.low   { background: var(--yellow); color: var(--text); }
+
+    .avg-box {
+      background: var(--brown-dark);
+      color: #fff;
+      border-radius: 16px;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .avg-box .ab-label { font-size: 12px; color: rgba(255,255,255,.6); }
+    .avg-box .ab-value { font-size: 28px; font-weight: 900; }
+    .avg-box .ab-sub   { font-size: 11px; color: rgba(255,255,255,.5); margin-top: 2px; }
+
+    /* ── Shopping quantities card ─────────────────────────────────── */
+    .day-selector {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    .day-tab {
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      border: 2px solid var(--cream);
+      background: var(--card-alt);
+      color: var(--brown-mid);
+      transition: background .15s, border-color .15s, color .15s;
+    }
+    .day-tab.active {
+      background: var(--brown-dark);
+      color: #fff;
+      border-color: var(--brown-dark);
+    }
+    .day-tab.today-tab {
+      border-color: var(--green);
+    }
+
+    .qty-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+
+    .qty-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      background: var(--card-alt);
+      border-radius: 10px;
+      font-size: 13px;
+    }
+    .qty-row .qr-emoji { font-size: 18px; flex-shrink: 0; }
+    .qty-row .qr-name  { flex: 1; font-weight: 700; }
+    .qty-row .qr-qty   { font-size: 16px; font-weight: 900; color: var(--brown-mid); background: var(--cream); padding: 2px 10px; border-radius: 20px; }
+
+    .qty-note {
+      font-size: 11px;
+      color: var(--muted);
+      background: var(--card-alt);
+      border-radius: 10px;
+      padding: 8px 12px;
+      margin-bottom: 12px;
+      line-height: 1.5;
+    }
+
+    .mark-generated-btn {
+      width: 100%;
+      padding: 11px;
+      background: var(--green);
+      color: #fff;
+      border: none;
+      border-radius: 14px;
+      font-size: 14px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: opacity .2s;
+    }
+    .mark-generated-btn:hover { opacity: .85; }
+
+    /* ── Toast ────────────────────────────────────────────────────── */
+    #toast {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--brown-dark);
+      color: #fff;
+      padding: 12px 28px;
+      border-radius: 30px;
+      font-weight: 700;
+      font-size: 14px;
+      opacity: 0;
+      transition: opacity .3s, transform .3s;
+      pointer-events: none;
+      z-index: 999;
+      white-space: nowrap;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* ── Modal ────────────────────────────────────────────────────── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.5);
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .25s;
+    }
+    .modal-overlay.show { opacity: 1; pointer-events: all; }
+    .modal {
+      background: var(--card);
+      border-radius: 24px;
+      padding: 28px;
+      max-width: 420px;
+      width: 100%;
+      box-shadow: 0 20px 60px rgba(0,0,0,.3);
+      transform: translateY(20px);
+      transition: transform .25s;
+    }
+    .modal-overlay.show .modal { transform: translateY(0); }
+    .modal h2 { font-size: 18px; margin-bottom: 8px; }
+    .modal p  { font-size: 13px; color: var(--muted); line-height: 1.5; margin-bottom: 16px; }
+    .modal-actions { display: flex; gap: 10px; }
+
+    /* ── Misc ─────────────────────────────────────────────────────── */
+    .empty-state {
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+      padding: 20px 0;
+    }
+
+    .pill {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      padding: 2px 8px;
+      border-radius: 20px;
+    }
+    .pill-green  { background: var(--green-light); color: var(--green); }
+    .pill-yellow { background: var(--yellow-light); color: #92400E; }
+    .pill-red    { background: #FEE2E2; color: #991B1B; }
+  </style>
+</head>
+<body>
+
+<!-- Google Identity Services (loaded lazily when user provides client ID) -->
+
+<!-- Page header -->
+<div class="page-header">
+  <h1>📅 Meatball – Team Calendar & Attendance</h1>
+  <div class="nav-links">
+    <a href="budget_tracker.html">💰 Budget</a>
+    <a href="fridge_scanner.html">📸 Fridge</a>
+    <a href="shopping_list.html">🛒 Shopping</a>
+  </div>
+</div>
+
+<!-- Auth bar -->
+<div class="auth-bar">
+  <label for="client-id-input">Google Client ID</label>
+  <input type="text" id="client-id-input" placeholder="xxxxxxxxxxxx.apps.googleusercontent.com" autocomplete="off" />
+  <span class="auth-status idle" id="auth-status-badge">Not connected</span>
+  <button class="btn btn-ghost btn-sm" id="connect-btn" onclick="connectGoogle()">Connect Calendar</button>
+  <button class="btn btn-ghost btn-sm" id="disconnect-btn" onclick="disconnectGoogle()" style="display:none">Disconnect</button>
+</div>
+
+<!-- Fallback warning banner -->
+<div class="fallback-banner" id="fallback-banner">
+  <div class="banner-icon">⚠️</div>
+  <div class="banner-text">
+    Calendar access unavailable
+    <span id="fallback-reason">Connect your Google Calendar above, or manage attendance manually below. Showing last known attendance.</span>
+  </div>
+</div>
+
+<!-- Attendance change banner -->
+<div class="change-banner" id="change-banner">
+  <div class="banner-text">
+    📊 Attendance has changed since your shopping list was generated!
+    <span id="change-detail">Some people's office status has changed.</span>
+  </div>
+  <button class="btn btn-primary btn-sm" onclick="markListGenerated()">Update &amp; Dismiss</button>
+  <button class="btn btn-ghost btn-sm" onclick="dismissChangeBanner()">Dismiss</button>
+</div>
+
+<!-- Main layout -->
+<div class="layout">
+
+  <!-- LEFT column -->
+  <div class="col-left">
+
+    <!-- Attendance grid card -->
+    <div class="card">
+      <div class="card-title">
+        <span>Who's in the Office This Week</span>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span class="pill pill-green">&#10003; In office</span>
+          <span class="pill pill-yellow">WFH</span>
+          <span class="pill pill-red">OOO</span>
+        </div>
+      </div>
+      <div class="grid-scroll">
+        <table class="att-table" id="att-table">
+          <thead id="att-thead"></thead>
+          <tbody id="att-tbody"></tbody>
+          <tfoot id="att-tfoot"></tfoot>
+        </table>
+      </div>
+      <div class="sync-row">
+        <div class="sync-info" id="sync-info">Last sync: never</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost btn-sm" onclick="syncCalendar()" id="sync-btn">🔄 Sync Now</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Calendar events log -->
+    <div class="card">
+      <div class="card-title">Detected Calendar Events This Week</div>
+      <div class="events-list" id="events-list">
+        <div class="empty-state">No events detected yet. Connect your calendar or events will appear after the first sync.</div>
+      </div>
+    </div>
+
+    <!-- Team configuration -->
+    <div class="card">
+      <div class="card-title">Team Members</div>
+      <div class="team-list" id="team-list"></div>
+      <div class="add-team-form">
+        <input type="text" id="inp-tm-name"  placeholder="Name (e.g. Sara)" />
+        <input type="email" id="inp-tm-email" placeholder="email@company.com (optional)" />
+        <button class="btn btn-primary btn-sm" onclick="addTeamMember()">+ Add</button>
+      </div>
+    </div>
+
+  </div><!-- /col-left -->
+
+  <!-- RIGHT column -->
+  <div class="col-right">
+
+    <!-- Summary card -->
+    <div class="card">
+      <div class="card-title">Weekly Attendance Summary</div>
+      <div class="summary-grid" id="summary-grid"></div>
+      <div class="avg-box">
+        <div>
+          <div class="ab-label">Average Daily Attendees</div>
+          <div class="ab-value" id="avg-value">–</div>
+          <div class="ab-sub">people per lunch</div>
+        </div>
+        <div style="font-size:48px">🍽️</div>
+      </div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.5">
+        Click any cell in the grid to manually toggle presence.
+        <br>Changes are saved instantly and shared with the shopping list.
+      </div>
+    </div>
+
+    <!-- Shopping quantities card -->
+    <div class="card">
+      <div class="card-title">Shopping Quantities</div>
+      <div class="day-selector" id="day-selector"></div>
+      <div class="qty-note" id="qty-note">Select a day to see recommended quantities.</div>
+      <div class="qty-list" id="qty-list"></div>
+      <button class="mark-generated-btn" onclick="markListGenerated()">
+        <span>✅</span> Mark Shopping List as Generated
+      </button>
+      <div style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center" id="generated-at-label"></div>
+    </div>
+
+  </div><!-- /col-right -->
+
+</div><!-- /layout -->
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- Regenerate confirmation modal -->
+<div class="modal-overlay" id="regen-modal">
+  <div class="modal">
+    <h2>Attendance Changed</h2>
+    <p id="regen-modal-text">The expected number of people has changed since your last shopping list was generated. Would you like to update the baseline now?</p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeRegenModal()">Not now</button>
+      <button class="btn btn-green" style="flex:1" onclick="markListGenerated(); closeRegenModal()">Update Baseline</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   CONSTANTS & CONFIG
+══════════════════════════════════════════════════════════════════════ */
+const STORAGE_KEY      = 'meatball_calendar_v1';
+const AUTH_KEY         = 'meatball_calendar_auth_v1';
+const BUDGET_KEY       = 'meatball_budget_v1';
+const CALENDAR_SCOPE   = 'https://www.googleapis.com/auth/calendar.readonly';
+const POLL_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+const DAYS             = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+
+// Keywords that indicate someone is out of the office
+const OOO_KEYWORDS = [
+  'ooo', 'out of office', 'vacation', 'holiday', 'sick', 'leave',
+  'absent', 'day off', 'annual leave', 'annual leave', 'verlof',
+  'vrij', 'vakantie', 'ziek', 'afwezig',
+];
+// Keywords that indicate someone is working from home
+const WFH_KEYWORDS = [
+  'wfh', 'work from home', 'working from home', 'remote', 'home office',
+  'thuis', 'thuiswerken', 'thuiswerk',
+];
+
+// Grocery items with per-person quantities
+const GROCERY_ITEMS = [
+  { name: 'Bread rolls',   emoji: '🍞', perPerson: 2   },
+  { name: 'Cheese slices', emoji: '🧀', perPerson: 3   },
+  { name: 'Ham / Deli',    emoji: '🥩', perPerson: 2   },
+  { name: 'Salad mix',     emoji: '🥗', perPerson: 0.5, unit: 'bag' },
+  { name: 'Cucumber',      emoji: '🥒', perPerson: 0.25, unit: 'pc' },
+  { name: 'Tomatoes',      emoji: '🍅', perPerson: 1   },
+  { name: 'Fruit',         emoji: '🍎', perPerson: 1   },
+  { name: 'Sparkling water', emoji: '💧', perPerson: 0.5, unit: 'bottle' },
+];
+
+// Default team members (with optional email for calendar lookup)
+const DEFAULT_TEAM = [
+  { id: 1, name: 'Hamza', email: '', emoji: '🧑', color: '#7B3F00' },
+  { id: 2, name: 'Sara',  email: '', emoji: '👩', color: '#C17F24' },
+  { id: 3, name: 'Tom',   email: '', emoji: '🧔', color: '#5A8A3C' },
+  { id: 4, name: 'Lisa',  email: '', emoji: '👧', color: '#D94F3B' },
+  { id: 5, name: 'Daan',  email: '', emoji: '👨', color: '#4A2C0A' },
+];
+
+/* ═══════════════════════════════════════════════════════════════════
+   STATE
+══════════════════════════════════════════════════════════════════════ */
+function defaultState() {
+  const monday = getMonday(new Date());
+  const attendance = {};
+  DAYS.forEach(d => {
+    attendance[d] = {};
+    DEFAULT_TEAM.forEach(m => { attendance[d][m.name] = 'present'; });
+  });
+  return {
+    weekStart: monday.toISOString(),
+    team: DEFAULT_TEAM,
+    attendance,            // { Mon: { Hamza: 'present'|'absent'|'wfh' }, ... }
+    detectedEvents: [],    // [{ day, title, type, person, timeLabel }]
+    lastSync: null,
+    calendarConnected: false,
+    listGeneratedAt: null,
+    listGeneratedAttendance: null, // snapshot of attendance when list was generated
+    fallbackMode: false,
+    fallbackReason: '',
+  };
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const s = JSON.parse(raw);
+      // Ensure this week's data exists
+      const expectedStart = getMonday(new Date()).toISOString();
+      if (s.weekStart !== expectedStart) {
+        // New week – reset attendance but keep team
+        const fresh = defaultState();
+        fresh.team = s.team || DEFAULT_TEAM;
+        fresh.listGeneratedAt = null;
+        fresh.listGeneratedAttendance = null;
+        return fresh;
+      }
+      return s;
+    }
+  } catch(e) { console.warn('State load error:', e); }
+  return defaultState();
+}
+
+function saveState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  // Also update budget_tracker.html's officeAttendance so the dashboard reflects real data
+  syncToBudgetTracker();
+}
+
+let state = loadState();
+
+/* ═══════════════════════════════════════════════════════════════════
+   AUTH STATE
+══════════════════════════════════════════════════════════════════════ */
+let authState = { clientId: '', accessToken: null, tokenExpiry: null };
+let tokenClient = null;
+let gsiLoaded   = false;
+
+function loadAuthState() {
+  try {
+    const raw = localStorage.getItem(AUTH_KEY);
+    if (raw) {
+      const a = JSON.parse(raw);
+      authState.clientId = a.clientId || '';
+      // Don't persist tokens – always re-auth on load for security
+    }
+  } catch(e) {}
+}
+
+function saveAuthState() {
+  localStorage.setItem(AUTH_KEY, JSON.stringify({ clientId: authState.clientId }));
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   DATE HELPERS
+══════════════════════════════════════════════════════════════════════ */
+function getMonday(d) {
+  const dt = new Date(d);
+  const day = dt.getDay();
+  const diff = dt.getDate() - day + (day === 0 ? -6 : 1);
+  dt.setDate(diff);
+  dt.setHours(0, 0, 0, 0);
+  return dt;
+}
+
+function getWeekDates() {
+  const monday = new Date(state.weekStart);
+  return DAYS.map((_, i) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    return d;
+  });
+}
+
+function todayDayIndex() {
+  const today = new Date();
+  const day = today.getDay(); // 0=Sun, 1=Mon … 5=Fri, 6=Sat
+  if (day >= 1 && day <= 5) return day - 1; // 0..4
+  return -1; // weekend
+}
+
+function formatDate(d) {
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+}
+
+function isoWeekBounds() {
+  const monday = new Date(state.weekStart);
+  const friday = new Date(monday);
+  friday.setDate(monday.getDate() + 5);
+  friday.setHours(0, 0, 0, 0);
+  return {
+    min: monday.toISOString(),
+    max: friday.toISOString(),
+  };
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   GOOGLE OAUTH (Google Identity Services)
+══════════════════════════════════════════════════════════════════════ */
+function loadGSI(callback) {
+  if (gsiLoaded) { callback(); return; }
+  const s = document.createElement('script');
+  s.src = 'https://accounts.google.com/gsi/client';
+  s.onload = () => { gsiLoaded = true; callback(); };
+  s.onerror = () => {
+    setFallbackMode(true, 'Could not load Google Sign-In library. Check your internet connection.');
+    updateAuthUI();
+  };
+  document.head.appendChild(s);
+}
+
+function connectGoogle() {
+  const clientId = document.getElementById('client-id-input').value.trim();
+  if (!clientId || !clientId.includes('.apps.googleusercontent.com')) {
+    toast('Please enter a valid Google Client ID (ends with .apps.googleusercontent.com)');
+    return;
+  }
+  authState.clientId = clientId;
+  saveAuthState();
+
+  setAuthBadge('idle', '⏳ Connecting…');
+
+  loadGSI(() => {
+    try {
+      tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: authState.clientId,
+        scope: CALENDAR_SCOPE,
+        callback: handleTokenResponse,
+        error_callback: handleAuthError,
+      });
+      tokenClient.requestAccessToken({ prompt: '' });
+    } catch(e) {
+      setFallbackMode(true, 'Google Sign-In initialisation failed: ' + e.message);
+      updateAuthUI();
+    }
+  });
+}
+
+function handleTokenResponse(response) {
+  if (response.error) {
+    handleAuthError(response);
+    return;
+  }
+  authState.accessToken = response.access_token;
+  authState.tokenExpiry  = Date.now() + (response.expires_in * 1000);
+  state.calendarConnected = true;
+  state.fallbackMode      = false;
+
+  setAuthBadge('connected', '✓ Connected');
+  document.getElementById('connect-btn').style.display    = 'none';
+  document.getElementById('disconnect-btn').style.display = '';
+  document.getElementById('fallback-banner').classList.remove('show');
+
+  saveState();
+  syncCalendar();
+}
+
+function handleAuthError(err) {
+  console.warn('Auth error:', err);
+  const msg = err.type === 'popup_closed'
+    ? 'Sign-in cancelled. You can still manage attendance manually.'
+    : `Sign-in failed: ${err.message || err.type || 'unknown error'}`;
+  setFallbackMode(true, msg);
+  updateAuthUI();
+}
+
+function disconnectGoogle() {
+  if (authState.accessToken) {
+    try { google.accounts.oauth2.revoke(authState.accessToken, () => {}); } catch(e) {}
+  }
+  authState.accessToken = null;
+  authState.tokenExpiry  = null;
+  state.calendarConnected = false;
+  setFallbackMode(true, 'Calendar disconnected. Attendance can be managed manually.');
+  saveState();
+  updateAuthUI();
+  toast('Calendar disconnected.');
+}
+
+function isTokenValid() {
+  return authState.accessToken && authState.tokenExpiry && Date.now() < authState.tokenExpiry - 30000;
+}
+
+function refreshTokenIfNeeded() {
+  if (isTokenValid()) return Promise.resolve();
+  if (!tokenClient) return Promise.reject(new Error('Not initialised'));
+  return new Promise((resolve, reject) => {
+    tokenClient.callback = (resp) => {
+      if (resp.error) { reject(new Error(resp.error)); return; }
+      authState.accessToken = resp.access_token;
+      authState.tokenExpiry  = Date.now() + (resp.expires_in * 1000);
+      resolve();
+    };
+    tokenClient.requestAccessToken({ prompt: '' });
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   GOOGLE CALENDAR API
+══════════════════════════════════════════════════════════════════════ */
+async function syncCalendar() {
+  if (!state.calendarConnected || !isTokenValid()) {
+    if (state.calendarConnected) {
+      // Token expired – try silent refresh
+      try {
+        await refreshTokenIfNeeded();
+      } catch(e) {
+        setFallbackMode(true, 'Session expired. Please reconnect your calendar.');
+        updateAuthUI();
+        return;
+      }
+    } else {
+      return; // Not connected, nothing to sync
+    }
+  }
+
+  setSyncStatus(true);
+
+  try {
+    const bounds = isoWeekBounds();
+    // Step 1: List all calendars
+    const calListResp = await calendarFetch(
+      `https://www.googleapis.com/calendar/v3/users/me/calendarList?maxResults=50`
+    );
+    const calList = (calListResp.items || []).map(c => c.id);
+
+    // Step 2: Fetch events from each calendar (limit to 5 calendars to avoid rate limits)
+    const calIds = calList.slice(0, 5);
+    const allEvents = [];
+    for (const calId of calIds) {
+      try {
+        const evResp = await calendarFetch(
+          `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calId)}/events` +
+          `?timeMin=${bounds.min}&timeMax=${bounds.max}` +
+          `&singleEvents=true&orderBy=startTime&maxResults=100`
+        );
+        (evResp.items || []).forEach(ev => allEvents.push(ev));
+      } catch(e) { /* skip unavailable calendar */ }
+    }
+
+    // Step 3: If team members have emails, run freebusy query
+    const emailedMembers = state.team.filter(m => m.email && m.email.includes('@'));
+    if (emailedMembers.length > 0) {
+      try {
+        const fbResp = await calendarFetch(
+          'https://www.googleapis.com/calendar/v3/freeBusy',
+          'POST',
+          {
+            timeMin: bounds.min,
+            timeMax: bounds.max,
+            items: emailedMembers.map(m => ({ id: m.email })),
+          }
+        );
+        processFreeBusy(fbResp, emailedMembers);
+      } catch(e) { console.warn('Freebusy error:', e); }
+    }
+
+    // Step 4: Process all events
+    const detectedEvents = [];
+    const newAttendance  = buildDefaultAttendance();
+
+    allEvents.forEach(ev => {
+      const result = parseEvent(ev);
+      if (result) {
+        detectedEvents.push(result);
+        applyEventToAttendance(newAttendance, result);
+      }
+    });
+
+    // Step 5: Preserve manual overrides (if user manually toggled something since last sync)
+    // Only update cells that weren't manually overridden
+    DAYS.forEach(day => {
+      state.team.forEach(member => {
+        const oldVal = state.attendance[day]?.[member.name];
+        const wasManual = state._manualOverrides?.[day]?.[member.name];
+        if (!wasManual) {
+          state.attendance[day][member.name] = newAttendance[day][member.name];
+        }
+      });
+    });
+
+    state.detectedEvents = detectedEvents;
+    state.lastSync = new Date().toISOString();
+
+    // Step 6: Check if attendance changed since list was generated
+    checkForAttendanceChange();
+
+    saveState();
+    setSyncStatus(false);
+    renderAll();
+    toast('Calendar synced successfully!');
+
+  } catch(e) {
+    console.error('Calendar sync error:', e);
+    setSyncStatus(false);
+    if (e.status === 401 || (e.message && e.message.includes('401'))) {
+      setFallbackMode(true, 'Calendar access was revoked. Please reconnect.');
+      state.calendarConnected = false;
+      updateAuthUI();
+    } else {
+      toast('Sync failed: ' + (e.message || 'Unknown error'));
+    }
+  }
+}
+
+async function calendarFetch(url, method = 'GET', body = null) {
+  const opts = {
+    method,
+    headers: {
+      'Authorization': `Bearer ${authState.accessToken}`,
+      'Content-Type': 'application/json',
+    },
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const resp = await fetch(url, opts);
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    const e = new Error(err?.error?.message || `HTTP ${resp.status}`);
+    e.status = resp.status;
+    throw e;
+  }
+  return resp.json();
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   EVENT PARSING
+══════════════════════════════════════════════════════════════════════ */
+function parseEvent(ev) {
+  const title       = (ev.summary || '').toLowerCase();
+  const description = (ev.description || '').toLowerCase();
+  const text        = title + ' ' + description;
+
+  // Determine event type
+  let type = null;
+  if (OOO_KEYWORDS.some(k => text.includes(k))) type = 'ooo';
+  else if (WFH_KEYWORDS.some(k => text.includes(k))) type = 'wfh';
+  else return null; // not an OOO/WFH event – ignore
+
+  // Determine which day(s) this event covers
+  const start = ev.start?.date
+    ? new Date(ev.start.date + 'T00:00:00')
+    : new Date(ev.start?.dateTime);
+  const end = ev.end?.date
+    ? new Date(ev.end.date + 'T00:00:00')
+    : new Date(ev.end?.dateTime);
+
+  const monday = new Date(state.weekStart);
+  const dayIdx = Math.floor((start - monday) / 86400000);
+  if (dayIdx < 0 || dayIdx > 4) return null;
+
+  const day = DAYS[dayIdx];
+
+  // Try to match event to a team member
+  let person = null;
+  const evTitle = ev.summary || '';
+  state.team.forEach(m => {
+    if (evTitle.toLowerCase().includes(m.name.toLowerCase())) {
+      person = m.name;
+    }
+    if (m.email && ev.organizer?.email === m.email) {
+      person = m.name;
+    }
+    if (m.email && (ev.attendees || []).some(a => a.email === m.email)) {
+      person = m.name;
+    }
+  });
+
+  const isAllDay = !!ev.start?.date;
+  const timeLabel = isAllDay
+    ? 'All day'
+    : `${formatTime(start)} – ${formatTime(end)}`;
+
+  return { day, title: ev.summary || '(No title)', type, person, timeLabel };
+}
+
+function applyEventToAttendance(attendance, event) {
+  if (event.person) {
+    attendance[event.day][event.person] = event.type === 'ooo' ? 'absent' : 'wfh';
+  } else {
+    // No person identified – could be a group event; leave attendance unchanged
+  }
+}
+
+function processFreeBusy(fbResp, members) {
+  const monday = new Date(state.weekStart);
+  members.forEach(member => {
+    const cal = fbResp.calendars?.[member.email];
+    if (!cal || !cal.busy) return;
+    DAYS.forEach((day, i) => {
+      const dayStart = new Date(monday); dayStart.setDate(monday.getDate() + i); dayStart.setHours(9, 0, 0, 0);
+      const dayEnd   = new Date(monday); dayEnd.setDate(monday.getDate() + i); dayEnd.setHours(17, 0, 0, 0);
+      let busyMs = 0;
+      cal.busy.forEach(slot => {
+        const s = new Date(slot.start);
+        const e = new Date(slot.end);
+        const overlap = Math.max(0, Math.min(e, dayEnd) - Math.max(s, dayStart));
+        busyMs += overlap;
+      });
+      const busyHours = busyMs / 3600000;
+      if (busyHours >= 6) {
+        // Busy most of the day – treat as not in office
+        if (state.attendance[day][member.name] === 'present') {
+          state.attendance[day][member.name] = 'absent';
+        }
+      }
+    });
+  });
+}
+
+function formatTime(d) {
+  return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   ATTENDANCE HELPERS
+══════════════════════════════════════════════════════════════════════ */
+function buildDefaultAttendance() {
+  const att = {};
+  DAYS.forEach(d => {
+    att[d] = {};
+    state.team.forEach(m => { att[d][m.name] = 'present'; });
+  });
+  return att;
+}
+
+function getDayCounts() {
+  return DAYS.map(day => {
+    const dayAtt = state.attendance[day] || {};
+    return Object.values(dayAtt).filter(v => v === 'present').length;
+  });
+}
+
+function getWeekAverage() {
+  const counts = getDayCounts();
+  if (!counts.length) return 0;
+  return (counts.reduce((a, b) => a + b, 0) / counts.length).toFixed(1);
+}
+
+function toggleAttendance(day, personName) {
+  const cur = state.attendance[day]?.[personName] || 'present';
+  const next = cur === 'present' ? 'absent' : cur === 'absent' ? 'wfh' : 'present';
+  state.attendance[day][personName] = next;
+  // Record as manual override so sync doesn't wipe it
+  if (!state._manualOverrides) state._manualOverrides = {};
+  if (!state._manualOverrides[day]) state._manualOverrides[day] = {};
+  state._manualOverrides[day][personName] = true;
+  checkForAttendanceChange();
+  saveState();
+  renderAll();
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   CHANGE DETECTION
+══════════════════════════════════════════════════════════════════════ */
+function checkForAttendanceChange() {
+  if (!state.listGeneratedAt || !state.listGeneratedAttendance) return;
+
+  const current = JSON.stringify(state.attendance);
+  const generated = JSON.stringify(state.listGeneratedAttendance);
+  if (current !== generated) {
+    const diffs = [];
+    DAYS.forEach(day => {
+      state.team.forEach(m => {
+        const was = state.listGeneratedAttendance[day]?.[m.name];
+        const now = state.attendance[day]?.[m.name];
+        if (was !== now) {
+          diffs.push(`${m.name} on ${day}: ${statusLabel(was)} → ${statusLabel(now)}`);
+        }
+      });
+    });
+    showChangeBanner(diffs);
+  } else {
+    hideChangeBanner();
+  }
+}
+
+function statusLabel(s) {
+  if (s === 'present') return 'In office';
+  if (s === 'wfh')     return 'WFH';
+  return 'Absent';
+}
+
+function showChangeBanner(diffs) {
+  const banner = document.getElementById('change-banner');
+  const detail = document.getElementById('change-detail');
+  banner.classList.add('show');
+  detail.textContent = diffs.slice(0, 3).join('; ') + (diffs.length > 3 ? ` (+${diffs.length - 3} more)` : '');
+}
+
+function hideChangeBanner() {
+  document.getElementById('change-banner').classList.remove('show');
+}
+
+function dismissChangeBanner() {
+  hideChangeBanner();
+}
+
+function markListGenerated() {
+  state.listGeneratedAt = new Date().toISOString();
+  state.listGeneratedAttendance = JSON.parse(JSON.stringify(state.attendance));
+  saveState();
+  hideChangeBanner();
+  renderGeneratedLabel();
+  toast('Shopping list baseline updated!');
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   BUDGET TRACKER INTEGRATION
+══════════════════════════════════════════════════════════════════════ */
+function syncToBudgetTracker() {
+  try {
+    const budgetRaw = localStorage.getItem(BUDGET_KEY);
+    const budget = budgetRaw ? JSON.parse(budgetRaw) : null;
+    if (!budget) return;
+
+    // Rebuild officeAttendance in the format budget_tracker expects
+    const officeAttendance = [];
+    state.team.forEach(member => {
+      DAYS.forEach(day => {
+        const status = state.attendance[day]?.[member.name] || 'present';
+        officeAttendance.push({
+          name:    member.name,
+          color:   member.color || '#7B3F00',
+          emoji:   member.emoji || '🧑',
+          day,
+          present: status === 'present',
+        });
+      });
+    });
+
+    budget.officeAttendance = officeAttendance;
+    localStorage.setItem(BUDGET_KEY, JSON.stringify(budget));
+  } catch(e) { /* budget tracker might not exist yet */ }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   TEAM MANAGEMENT
+══════════════════════════════════════════════════════════════════════ */
+const EMOJIS = ['🧑', '👩', '🧔', '👧', '👨', '👱', '🧕', '👴', '🧓', '👲'];
+const COLORS = ['#7B3F00', '#C17F24', '#5A8A3C', '#D94F3B', '#4A2C0A', '#2563EB', '#7C3AED', '#059669', '#DC2626', '#D97706'];
+
+function addTeamMember() {
+  const nameEl  = document.getElementById('inp-tm-name');
+  const emailEl = document.getElementById('inp-tm-email');
+  const name    = nameEl.value.trim();
+  const email   = emailEl.value.trim();
+
+  if (!name) { toast('Please enter a name.'); return; }
+  if (state.team.find(m => m.name.toLowerCase() === name.toLowerCase())) {
+    toast(`"${name}" is already in the team.`); return;
+  }
+
+  const idx = state.team.length;
+  const newMember = {
+    id: Date.now(),
+    name,
+    email,
+    emoji: EMOJIS[idx % EMOJIS.length],
+    color: COLORS[idx % COLORS.length],
+  };
+  state.team.push(newMember);
+
+  // Add to attendance for all days
+  DAYS.forEach(day => {
+    if (!state.attendance[day]) state.attendance[day] = {};
+    state.attendance[day][name] = 'present';
+  });
+
+  nameEl.value  = '';
+  emailEl.value = '';
+  saveState();
+  renderAll();
+  toast(`${name} added to team!`);
+}
+
+function removeTeamMember(id) {
+  const member = state.team.find(m => m.id === id);
+  if (!member) return;
+  state.team = state.team.filter(m => m.id !== id);
+  DAYS.forEach(day => {
+    if (state.attendance[day]) delete state.attendance[day][member.name];
+  });
+  if (state._manualOverrides) {
+    DAYS.forEach(day => {
+      if (state._manualOverrides[day]) delete state._manualOverrides[day][member.name];
+    });
+  }
+  saveState();
+  renderAll();
+  toast(`${member.name} removed from team.`);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   FALLBACK / AUTH UI
+══════════════════════════════════════════════════════════════════════ */
+function setFallbackMode(on, reason) {
+  state.fallbackMode = on;
+  state.fallbackReason = reason || '';
+  const banner = document.getElementById('fallback-banner');
+  if (on) {
+    banner.classList.add('show');
+    document.getElementById('fallback-reason').textContent = reason;
+  } else {
+    banner.classList.remove('show');
+  }
+}
+
+function setAuthBadge(type, text) {
+  const badge = document.getElementById('auth-status-badge');
+  badge.textContent = text;
+  badge.className = `auth-status ${type}`;
+}
+
+function setSyncStatus(syncing) {
+  const info = document.getElementById('sync-info');
+  const btn  = document.getElementById('sync-btn');
+  if (syncing) {
+    info.innerHTML = '<span class="spinner-inline"></span> Syncing…';
+    btn.disabled = true;
+  } else {
+    const t = state.lastSync
+      ? new Date(state.lastSync).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+      : 'never';
+    info.textContent = `Last sync: ${t}`;
+    btn.disabled = false;
+  }
+}
+
+function updateAuthUI() {
+  const connected = state.calendarConnected && isTokenValid();
+  document.getElementById('connect-btn').style.display    = connected ? 'none' : '';
+  document.getElementById('disconnect-btn').style.display = connected ? '' : 'none';
+  setAuthBadge(
+    connected ? 'connected' : state.fallbackMode ? 'warning' : 'idle',
+    connected ? '✓ Connected' : state.fallbackMode ? '⚠ Using fallback' : 'Not connected'
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   SHOPPING QUANTITIES
+══════════════════════════════════════════════════════════════════════ */
+let selectedShoppingDay = null;
+
+function initShoppingDay() {
+  const todayIdx = todayDayIndex();
+  selectedShoppingDay = todayIdx >= 0 ? DAYS[todayIdx] : DAYS[0];
+}
+
+function renderDaySelector() {
+  const todayIdx = todayDayIndex();
+  const dates = getWeekDates();
+  const el = document.getElementById('day-selector');
+  el.innerHTML = DAYS.map((day, i) => `
+    <button
+      class="day-tab ${day === selectedShoppingDay ? 'active' : ''} ${i === todayIdx ? 'today-tab' : ''}"
+      onclick="selectShoppingDay('${day}')"
+    >${day}${i === todayIdx ? ' ★' : ''}</button>
+  `).join('');
+}
+
+function selectShoppingDay(day) {
+  selectedShoppingDay = day;
+  renderDaySelector();
+  renderQtyList();
+}
+
+function renderQtyList() {
+  const day = selectedShoppingDay;
+  const dayAtt = state.attendance[day] || {};
+  const count  = Object.values(dayAtt).filter(v => v === 'present').length;
+  const todayIdx = todayDayIndex();
+  const dayIdx   = DAYS.indexOf(day);
+
+  const noteEl = document.getElementById('qty-note');
+  const listEl = document.getElementById('qty-list');
+
+  noteEl.textContent = `${day}${dayIdx === todayIdx ? ' (today)' : ''}: expecting ${count} ${count === 1 ? 'person' : 'people'} for lunch.`;
+
+  if (count === 0) {
+    listEl.innerHTML = '<div class="empty-state">No attendees expected. Nobody to shop for!</div>';
+    return;
+  }
+
+  listEl.innerHTML = GROCERY_ITEMS.map(item => {
+    const raw = item.perPerson * count;
+    const qty  = item.unit === 'bag' || item.unit === 'bottle'
+      ? Math.ceil(raw)
+      : Math.round(raw);
+    const unit = item.unit || (qty === 1 ? 'piece' : 'pieces');
+    return `
+      <div class="qty-row">
+        <span class="qr-emoji">${item.emoji}</span>
+        <span class="qr-name">${item.name}</span>
+        <span class="qr-qty">${qty} <span style="font-size:10px;font-weight:600">${unit}</span></span>
+      </div>`;
+  }).join('');
+}
+
+function renderGeneratedLabel() {
+  const el = document.getElementById('generated-at-label');
+  if (state.listGeneratedAt) {
+    const t = new Date(state.listGeneratedAt);
+    el.textContent = `Baseline set: ${t.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })} at ${t.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`;
+  } else {
+    el.textContent = 'No baseline set yet. Click the button above after generating your shopping list.';
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   RENDER
+══════════════════════════════════════════════════════════════════════ */
+function renderAll() {
+  renderAttendanceGrid();
+  renderSummary();
+  renderDaySelector();
+  renderQtyList();
+  renderGeneratedLabel();
+  renderTeamList();
+  renderEventsList();
+  setSyncStatus(false);
+}
+
+function renderAttendanceGrid() {
+  const dates    = getWeekDates();
+  const todayIdx = todayDayIndex();
+
+  // Header
+  const thead = document.getElementById('att-thead');
+  thead.innerHTML = `<tr>
+    <th class="person-col">Person</th>
+    ${DAYS.map((day, i) => `
+      <th>
+        <div class="day-header ${i === todayIdx ? 'today-col' : ''}">
+          <span class="dh-name">${day}</span>
+          <span class="dh-date">${formatDate(dates[i])}</span>
+        </div>
+      </th>`).join('')}
+  </tr>`;
+
+  // Body
+  const tbody = document.getElementById('att-tbody');
+  tbody.innerHTML = state.team.map(member => `
+    <tr>
+      <td class="person-cell">
+        <div class="person-cell-inner">
+          <div class="person-avatar" style="background:${member.color}">${member.emoji}</div>
+          <span>${escHtml(member.name)}</span>
+        </div>
+      </td>
+      ${DAYS.map((day, i) => {
+        const status = state.attendance[day]?.[member.name] || 'present';
+        const icon   = status === 'present' ? '✓' : status === 'wfh' ? '🏠' : '✕';
+        const cls    = `att-toggle ${status}${i === todayIdx ? ' today' : ''}`;
+        return `<td>
+          <button class="${cls}"
+            title="${member.name} on ${day}: ${statusLabel(status)} (click to toggle)"
+            onclick="toggleAttendance('${day}', '${escHtml(member.name)}')"
+          >${icon}</button>
+        </td>`;
+      }).join('')}
+    </tr>
+  `).join('');
+
+  // Footer: day counts
+  const counts = getDayCounts();
+  const tfoot  = document.getElementById('att-tfoot');
+  tfoot.innerHTML = `
+    <tr class="count-row">
+      <td style="font-size:12px;color:var(--muted);font-weight:700;padding-top:10px;">Expected</td>
+      ${counts.map((c, i) => `
+        <td>
+          <div class="day-count-badge ${i === todayIdx ? 'today-badge' : ''}">${c}</div>
+        </td>`).join('')}
+    </tr>`;
+}
+
+function renderSummary() {
+  const dates    = getWeekDates();
+  const counts   = getDayCounts();
+  const todayIdx = todayDayIndex();
+
+  const summaryEl = document.getElementById('summary-grid');
+  summaryEl.innerHTML = DAYS.map((day, i) => {
+    const c     = counts[i];
+    const cls   = i === todayIdx ? 'today' : c <= 2 ? 'low' : '';
+    return `
+      <div class="summary-day">
+        <div class="sd-label">${day}</div>
+        <div class="sd-count ${cls}">${c}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px">${formatDate(dates[i])}</div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('avg-value').textContent = getWeekAverage();
+}
+
+function renderTeamList() {
+  const el = document.getElementById('team-list');
+  if (!state.team.length) {
+    el.innerHTML = '<div class="empty-state">No team members yet. Add one below.</div>';
+    return;
+  }
+  el.innerHTML = state.team.map(m => `
+    <div class="team-member-row">
+      <div class="person-avatar" style="background:${m.color};width:30px;height:30px;font-size:15px">${m.emoji}</div>
+      <span class="tm-name">${escHtml(m.name)}</span>
+      <span class="tm-email">${escHtml(m.email || '—')}</span>
+      <button class="tm-remove" onclick="removeTeamMember(${m.id})" title="Remove ${escHtml(m.name)}">✕</button>
+    </div>
+  `).join('');
+}
+
+function renderEventsList() {
+  const el = document.getElementById('events-list');
+  if (!state.detectedEvents || !state.detectedEvents.length) {
+    el.innerHTML = state.calendarConnected
+      ? '<div class="empty-state">No OOO or WFH events detected for this week.</div>'
+      : '<div class="empty-state">Connect your Google Calendar above to detect OOO and WFH events automatically. Or manage attendance manually.</div>';
+    return;
+  }
+
+  const byDay = {};
+  DAYS.forEach(d => { byDay[d] = []; });
+  state.detectedEvents.forEach(ev => { if (byDay[ev.day]) byDay[ev.day].push(ev); });
+
+  let html = '';
+  DAYS.forEach(day => {
+    const evs = byDay[day];
+    html += `<div class="event-day-block">
+      <div class="event-day-label">${day}</div>`;
+    if (!evs.length) {
+      html += `<div class="event-item"><span class="event-dot" style="background:var(--green)"></span><span style="color:var(--muted);font-size:12px">No absences</span></div>`;
+    } else {
+      evs.forEach(ev => {
+        const dotCls = ev.type === 'ooo' ? 'dot-ooo' : ev.type === 'wfh' ? 'dot-wfh' : 'dot-other';
+        const badge  = ev.type === 'ooo' ? 'OOO' : ev.type === 'wfh' ? 'WFH' : '';
+        html += `
+          <div class="event-item">
+            <div class="event-dot ${dotCls}"></div>
+            <div>
+              <div class="event-name">${escHtml(ev.title)}${ev.person ? ` <span style="color:var(--muted);font-weight:400">(${escHtml(ev.person)})</span>` : ''} ${badge ? `<span class="pill ${ev.type === 'ooo' ? 'pill-red' : 'pill-yellow'}">${badge}</span>` : ''}</div>
+              <div class="event-time">${escHtml(ev.timeLabel)}</div>
+            </div>
+          </div>`;
+      });
+    }
+    html += '</div>';
+  });
+  el.innerHTML = html;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   MODAL
+══════════════════════════════════════════════════════════════════════ */
+function closeRegenModal() {
+  document.getElementById('regen-modal').classList.remove('show');
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   TOAST
+══════════════════════════════════════════════════════════════════════ */
+let toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 3200);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   UTILS
+══════════════════════════════════════════════════════════════════════ */
+function escHtml(s) {
+  return String(s || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   POLLING
+══════════════════════════════════════════════════════════════════════ */
+function startPolling() {
+  setInterval(() => {
+    if (state.calendarConnected && isTokenValid()) {
+      syncCalendar();
+    }
+  }, POLL_INTERVAL_MS);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   INIT
+══════════════════════════════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', () => {
+  loadAuthState();
+
+  // Pre-fill client ID if saved
+  if (authState.clientId) {
+    document.getElementById('client-id-input').value = authState.clientId;
+  }
+
+  // Ensure attendance has entries for all team members
+  state.team.forEach(m => {
+    DAYS.forEach(day => {
+      if (!state.attendance[day]) state.attendance[day] = {};
+      if (!(m.name in state.attendance[day])) {
+        state.attendance[day][m.name] = 'present';
+      }
+    });
+  });
+
+  initShoppingDay();
+  updateAuthUI();
+
+  // Show fallback banner if not connected
+  if (!state.calendarConnected) {
+    setFallbackMode(true,
+      state.lastSync
+        ? `Calendar not connected. Showing attendance from last sync at ${new Date(state.lastSync).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}.`
+        : 'Connect your Google Calendar above, or manage attendance manually. Enter your Google OAuth Client ID to get started.'
+    );
+  }
+
+  renderAll();
+  startPolling();
+
+  // Keyboard shortcut: Enter on team member name field
+  document.getElementById('inp-tm-email').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addTeamMember();
+  });
+  document.getElementById('inp-tm-name').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('inp-tm-email').focus();
+  });
+
+  // Client ID input: save on change
+  document.getElementById('client-id-input').addEventListener('change', e => {
+    authState.clientId = e.target.value.trim();
+    saveAuthState();
+  });
+});
+</script>
+</body>
+</html>
