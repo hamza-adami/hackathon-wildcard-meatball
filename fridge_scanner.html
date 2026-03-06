@@ -1,0 +1,1339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Meatball – Fridge Scanner</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:           #F97059;
+      --card:         #FFFDF4;
+      --card-alt:     #FFF8E7;
+      --brown-dark:   #4A2C0A;
+      --brown-mid:    #7B3F00;
+      --brown-light:  #C17F24;
+      --cream:        #F5E6C8;
+      --green:        #5A8A3C;
+      --green-light:  #A8D878;
+      --red:          #D94F3B;
+      --orange:       #E07B39;
+      --text:         #2E1A0E;
+      --muted:        #9E7A56;
+      --shadow:       0 4px 16px rgba(0,0,0,.15);
+    }
+
+    body {
+      font-family: 'Comic Sans MS', 'Comic Sans', cursive;
+      background: var(--bg);
+      min-height: 100vh;
+      padding: 24px;
+      color: var(--text);
+    }
+
+    h1, h2, h3 { font-weight: 800; letter-spacing: .02em; }
+
+    .page-header {
+      max-width: 1100px;
+      margin: 0 auto 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .page-header h1 {
+      font-size: 24px;
+      color: #fff;
+      text-shadow: 0 2px 8px rgba(0,0,0,.2);
+    }
+
+    .page-header a {
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      text-decoration: none;
+      background: rgba(255,255,255,.2);
+      padding: 7px 16px;
+      border-radius: 20px;
+      transition: background .2s;
+    }
+    .page-header a:hover { background: rgba(255,255,255,.35); }
+
+    .layout {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 20px;
+    }
+
+    @media (max-width: 800px) {
+      .layout { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 24px;
+      padding: 24px;
+      box-shadow: var(--shadow);
+    }
+
+    .card-title {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: .12em;
+      color: var(--muted);
+      margin-bottom: 16px;
+    }
+
+    /* ── API Key bar ──────────────────────────────────────────────── */
+    .api-bar {
+      max-width: 1100px;
+      margin: 0 auto 20px;
+      background: var(--brown-dark);
+      border-radius: 20px;
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      box-shadow: var(--shadow);
+    }
+
+    .api-bar label {
+      font-size: 12px;
+      font-weight: 700;
+      color: rgba(255,255,255,.7);
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      white-space: nowrap;
+    }
+
+    .api-bar input {
+      flex: 1;
+      min-width: 220px;
+      padding: 8px 14px;
+      border-radius: 12px;
+      border: none;
+      font-size: 13px;
+      background: rgba(255,255,255,.12);
+      color: #fff;
+      outline: none;
+      font-family: monospace;
+    }
+
+    .api-bar input::placeholder { color: rgba(255,255,255,.4); }
+    .api-bar input:focus { background: rgba(255,255,255,.2); }
+
+    .api-status {
+      font-size: 12px;
+      font-weight: 700;
+      padding: 5px 12px;
+      border-radius: 20px;
+      white-space: nowrap;
+    }
+    .api-status.ok  { background: var(--green); color: #fff; }
+    .api-status.bad { background: var(--red);   color: #fff; }
+
+    /* ── Scanner card ─────────────────────────────────────────────── */
+    .drop-zone {
+      border: 3px dashed var(--cream);
+      border-radius: 18px;
+      padding: 40px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+      position: relative;
+      background: var(--card-alt);
+    }
+
+    .drop-zone:hover, .drop-zone.drag-over {
+      border-color: var(--brown-light);
+      background: #fff9ec;
+    }
+
+    .drop-zone input[type=file] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .drop-icon { font-size: 48px; margin-bottom: 12px; display: block; }
+
+    .drop-zone p {
+      font-size: 14px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .drop-zone p strong { color: var(--brown-mid); }
+
+    /* Preview */
+    .preview-wrap {
+      margin-top: 16px;
+      position: relative;
+      display: none;
+    }
+
+    .preview-wrap.show { display: block; }
+
+    .preview-wrap img {
+      width: 100%;
+      max-height: 340px;
+      object-fit: contain;
+      border-radius: 14px;
+      border: 2px solid var(--cream);
+      background: #000;
+    }
+
+    .preview-clear {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: var(--red);
+      color: #fff;
+      border: none;
+      border-radius: 50%;
+      width: 28px;
+      height: 28px;
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+    }
+
+    /* Camera */
+    .camera-btn {
+      margin-top: 10px;
+      padding: 9px 18px;
+      background: var(--brown-mid);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity .2s;
+    }
+    .camera-btn:hover { opacity: .85; }
+
+    #video-wrap {
+      display: none;
+      margin-top: 14px;
+      position: relative;
+    }
+    #video-wrap.show { display: block; }
+
+    #camera-video {
+      width: 100%;
+      border-radius: 14px;
+      background: #000;
+    }
+
+    .snap-btn {
+      margin-top: 10px;
+      width: 100%;
+      padding: 11px;
+      background: var(--brown-dark);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    /* Analyse button */
+    .analyse-btn {
+      margin-top: 16px;
+      width: 100%;
+      padding: 14px;
+      background: var(--brown-dark);
+      color: #fff;
+      border: none;
+      border-radius: 14px;
+      font-size: 15px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: opacity .2s, transform .1s;
+    }
+    .analyse-btn:active { transform: scale(.98); }
+    .analyse-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+    /* ── Progress / status ────────────────────────────────────────── */
+    .scan-status {
+      margin-top: 14px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 700;
+      display: none;
+    }
+
+    .scan-status.show { display: flex; align-items: center; gap: 10px; }
+    .scan-status.info    { background: #EEF6FF; color: #1D4ED8; }
+    .scan-status.success { background: #ECFDF5; color: #065F46; }
+    .scan-status.error   { background: #FEF2F2; color: #991B1B; }
+
+    .spinner {
+      width: 18px; height: 18px;
+      border: 3px solid currentColor;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Results modal / panel ────────────────────────────────────── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.55);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .3s;
+    }
+
+    .modal-overlay.show {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .modal {
+      background: var(--card);
+      border-radius: 28px;
+      padding: 28px;
+      max-width: 560px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0,0,0,.3);
+      transform: translateY(24px);
+      transition: transform .3s;
+    }
+
+    .modal-overlay.show .modal { transform: translateY(0); }
+
+    .modal-title {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--brown-dark);
+      margin-bottom: 6px;
+    }
+
+    .modal-sub {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 20px;
+    }
+
+    /* Detected items list */
+    .detected-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+
+    .detected-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--card-alt);
+      border-radius: 14px;
+      padding: 10px 14px;
+    }
+
+    .detected-item .item-icon { font-size: 22px; flex-shrink: 0; }
+
+    .detected-item .item-info { flex: 1; min-width: 0; }
+    .detected-item .item-name { font-size: 14px; font-weight: 700; }
+    .detected-item .item-badge {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      padding: 2px 8px;
+      border-radius: 20px;
+      display: inline-block;
+      margin-top: 2px;
+    }
+    .badge-known    { background: var(--green-light); color: var(--green); }
+    .badge-unknown  { background: #FDE68A; color: #92400E; }
+
+    .qty-control {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .qty-btn {
+      width: 26px; height: 26px;
+      border: none;
+      border-radius: 8px;
+      background: var(--cream);
+      color: var(--brown-dark);
+      font-size: 16px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background .15s;
+    }
+    .qty-btn:hover { background: var(--brown-light); color: #fff; }
+
+    .qty-val {
+      font-size: 16px;
+      font-weight: 800;
+      min-width: 24px;
+      text-align: center;
+      color: var(--brown-dark);
+    }
+
+    /* Manual ID input for unknown items */
+    .manual-input {
+      margin-top: 6px;
+      width: 100%;
+      padding: 7px 10px;
+      border: 2px solid var(--cream);
+      border-radius: 10px;
+      font-size: 13px;
+      background: #fff;
+      color: var(--text);
+      outline: none;
+    }
+    .manual-input:focus { border-color: var(--brown-light); }
+
+    .skip-btn {
+      background: none;
+      border: none;
+      font-size: 11px;
+      color: var(--muted);
+      cursor: pointer;
+      text-decoration: underline;
+      padding: 0;
+    }
+
+    /* Modal buttons */
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 4px;
+    }
+
+    .btn {
+      padding: 11px 20px;
+      border: none;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity .2s, transform .1s;
+      flex: 1;
+    }
+    .btn:active { transform: scale(.97); }
+    .btn-primary { background: var(--brown-dark); color: #fff; }
+    .btn-ghost   { background: var(--cream); color: var(--brown-dark); }
+
+    /* ── Inventory panel ──────────────────────────────────────────── */
+    .inventory-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .inv-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 12px;
+      background: var(--card-alt);
+      border-radius: 12px;
+      font-size: 13px;
+    }
+
+    .inv-item .inv-icon { font-size: 20px; }
+    .inv-item .inv-name { flex: 1; font-weight: 700; }
+
+    .inv-qty {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .inv-qty-val {
+      font-size: 15px;
+      font-weight: 800;
+      min-width: 22px;
+      text-align: center;
+      color: var(--brown-mid);
+    }
+
+    .inv-qty-btn {
+      width: 22px; height: 22px;
+      border: none;
+      border-radius: 6px;
+      background: var(--cream);
+      color: var(--brown-dark);
+      font-size: 14px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .inv-qty-btn:hover { background: var(--brown-light); color: #fff; }
+
+    .inv-remove {
+      background: none;
+      border: none;
+      color: var(--red);
+      font-size: 14px;
+      cursor: pointer;
+      padding: 2px 4px;
+      border-radius: 6px;
+    }
+    .inv-remove:hover { background: #fde8e4; }
+
+    .inv-low { color: var(--red) !important; }
+
+    .inv-empty {
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+      padding: 20px 0;
+    }
+
+    /* Add product to inventory */
+    .add-inv-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .add-inv-row input {
+      flex: 1;
+      padding: 8px 12px;
+      border: 2px solid var(--cream);
+      border-radius: 10px;
+      font-size: 13px;
+      background: var(--card-alt);
+      color: var(--text);
+      outline: none;
+    }
+    .add-inv-row input:focus { border-color: var(--brown-light); }
+
+    .add-inv-row button {
+      padding: 8px 14px;
+      background: var(--brown-dark);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    /* ── Scan history ─────────────────────────────────────────────── */
+    .history-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 280px;
+      overflow-y: auto;
+    }
+
+    .history-item {
+      background: var(--card-alt);
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-size: 12px;
+    }
+
+    .history-item .h-time {
+      color: var(--muted);
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .history-item .h-changes {
+      color: var(--text);
+      font-weight: 700;
+    }
+
+    .history-empty {
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+      padding: 14px 0;
+    }
+
+    /* ── Toast ────────────────────────────────────────────────────── */
+    #toast {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--brown-dark);
+      color: #fff;
+      padding: 12px 28px;
+      border-radius: 30px;
+      font-weight: 700;
+      font-size: 14px;
+      opacity: 0;
+      transition: opacity .3s, transform .3s;
+      pointer-events: none;
+      z-index: 999;
+      white-space: nowrap;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* Section divider in inventory */
+    .section-hdr {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      color: var(--muted);
+      font-weight: 700;
+      margin: 14px 0 6px;
+    }
+
+    .section-hdr:first-child { margin-top: 0; }
+
+    /* Low stock warning banner */
+    .low-stock-banner {
+      display: none;
+      background: #FEF3C7;
+      border: 1px solid #FCD34D;
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #92400E;
+      margin-bottom: 12px;
+    }
+    .low-stock-banner.show { display: flex; gap: 8px; align-items: center; }
+  </style>
+</head>
+<body>
+
+<!-- Page header -->
+<div class="page-header">
+  <h1>🥩 Meatball – Fridge Scanner</h1>
+  <a href="budget_tracker.html">← Budget Dashboard</a>
+</div>
+
+<!-- API Key bar -->
+<div class="api-bar">
+  <label>Anthropic API Key</label>
+  <input type="password" id="api-key-input" placeholder="sk-ant-…" autocomplete="off" />
+  <span class="api-status bad" id="api-status">No key</span>
+</div>
+
+<!-- Main layout -->
+<div class="layout">
+
+  <!-- LEFT: Scanner -->
+  <div style="display:flex;flex-direction:column;gap:20px">
+
+    <!-- Photo upload / camera -->
+    <div class="card">
+      <div class="card-title">Scan Fridge / Lunch Drawer</div>
+
+      <div class="drop-zone" id="drop-zone">
+        <input type="file" id="file-input" accept="image/*" capture="environment" />
+        <span class="drop-icon">📸</span>
+        <p><strong>Click to upload</strong> or drag & drop a photo</p>
+        <p style="margin-top:4px;font-size:12px">JPG, PNG, WEBP – max 20 MB</p>
+      </div>
+
+      <div style="text-align:center;margin-top:10px">
+        <button class="camera-btn" onclick="toggleCamera()">📷 Use Camera</button>
+      </div>
+
+      <div id="video-wrap">
+        <video id="camera-video" autoplay playsinline muted></video>
+        <canvas id="snap-canvas" style="display:none"></canvas>
+        <button class="snap-btn" onclick="snapPhoto()">📸 Take Photo</button>
+      </div>
+
+      <div class="preview-wrap" id="preview-wrap">
+        <img id="preview-img" src="" alt="Preview" />
+        <button class="preview-clear" onclick="clearPhoto()" title="Remove photo">✕</button>
+      </div>
+
+      <button class="analyse-btn" id="analyse-btn" onclick="analysePhoto()" disabled>
+        <span>🔍</span> Analyse Photo
+      </button>
+
+      <div class="scan-status" id="scan-status"></div>
+    </div>
+
+    <!-- Scan history -->
+    <div class="card">
+      <div class="card-title">Scan History</div>
+      <div class="history-list" id="history-list">
+        <div class="history-empty">No scans yet this session.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT: Inventory -->
+  <div class="card" style="align-self:start;position:sticky;top:20px">
+    <div class="card-title">Inventory</div>
+
+    <div class="low-stock-banner" id="low-stock-banner">
+      ⚠️ Some items are running low!
+    </div>
+
+    <div class="inventory-list" id="inventory-list">
+      <div class="inv-empty">Loading inventory…</div>
+    </div>
+
+    <div class="add-inv-row">
+      <input type="text" id="inp-new-product" placeholder="New product name…" />
+      <button onclick="addInventoryItem()">+ Add</button>
+    </div>
+  </div>
+</div>
+
+<!-- Results modal -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-title" id="modal-title">Scan Results</div>
+    <div class="modal-sub" id="modal-sub"></div>
+
+    <div class="detected-list" id="detected-list"></div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" id="confirm-btn" onclick="confirmUpdate()">Apply Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+/* ── Constants ──────────────────────────────────────────────────────── */
+const STORAGE_KEY_INV = 'meatball_inventory_v1';
+const STORAGE_KEY_API = 'meatball_api_key_v1';
+const LOW_STOCK_THRESHOLD = 2;
+
+/* ── Known product catalogue ────────────────────────────────────────── */
+const KNOWN_PRODUCTS_CATALOGUE = [
+  { name: 'Cheese', emoji: '🧀', aliases: ['cheese', 'kaas', 'cheddar', 'gouda', 'emmental', 'brie', 'mozzarella'] },
+  { name: 'Grill Sausage', emoji: '🌭', aliases: ['grill sausage', 'grillworst', 'sausage', 'worst', 'bratwurst', 'chorizo', 'salami'] },
+  { name: 'Cucumber', emoji: '🥒', aliases: ['cucumber', 'komkommer', 'gherkin'] },
+  { name: 'Tomato', emoji: '🍅', aliases: ['tomato', 'tomaat', 'cherry tomato'] },
+  { name: 'Lettuce', emoji: '🥬', aliases: ['lettuce', 'sla', 'salad', 'spinach', 'arugula', 'rocket'] },
+  { name: 'Bread', emoji: '🍞', aliases: ['bread', 'brood', 'baguette', 'roll', 'bun', 'sandwich'] },
+  { name: 'Milk', emoji: '🥛', aliases: ['milk', 'melk', 'oat milk', 'soy milk', 'almond milk'] },
+  { name: 'Butter', emoji: '🧈', aliases: ['butter', 'boter', 'margarine'] },
+  { name: 'Eggs', emoji: '🥚', aliases: ['egg', 'eggs', 'ei', 'eieren'] },
+  { name: 'Ham', emoji: '🥩', aliases: ['ham', 'prosciutto', 'deli meat', 'cold cuts', 'vleeswaren'] },
+  { name: 'Yogurt', emoji: '🍶', aliases: ['yogurt', 'yoghurt', 'kwark', 'quark'] },
+  { name: 'Apple', emoji: '🍎', aliases: ['apple', 'appel'] },
+  { name: 'Orange', emoji: '🍊', aliases: ['orange', 'sinaasappel', 'clementine', 'mandarin'] },
+  { name: 'Banana', emoji: '🍌', aliases: ['banana', 'banaan'] },
+  { name: 'Bell Pepper', emoji: '🫑', aliases: ['bell pepper', 'paprika', 'pepper', 'capsicum'] },
+  { name: 'Carrot', emoji: '🥕', aliases: ['carrot', 'wortel'] },
+  { name: 'Hummus', emoji: '🫙', aliases: ['hummus', 'houmous'] },
+  { name: 'Juice', emoji: '🧃', aliases: ['juice', 'sap', 'orange juice', 'apple juice', 'sinaasappelsap'] },
+  { name: 'Water', emoji: '💧', aliases: ['water', 'sparkling water', 'mineral water', 'spa'] },
+  { name: 'Soft Drink', emoji: '🥤', aliases: ['cola', 'fanta', 'sprite', 'soda', 'soft drink', 'frisdrank'] },
+];
+
+/* ── State ──────────────────────────────────────────────────────────── */
+let inventory = [];     // [{ id, name, emoji, qty }]
+let pendingResults = []; // items from last scan
+let cameraStream = null;
+let imageBase64 = null;
+let imageMimeType = null;
+
+/* ── Init ───────────────────────────────────────────────────────────── */
+function init() {
+  loadInventory();
+  loadApiKey();
+  renderInventory();
+  renderHistory();
+
+  // Drag & drop
+  const dz = document.getElementById('drop-zone');
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+  dz.addEventListener('drop', e => {
+    e.preventDefault();
+    dz.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file) handleFile(file);
+  });
+
+  document.getElementById('file-input').addEventListener('change', e => {
+    if (e.target.files[0]) handleFile(e.target.files[0]);
+  });
+
+  document.getElementById('api-key-input').addEventListener('input', onApiKeyChange);
+  document.getElementById('inp-new-product').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addInventoryItem();
+  });
+}
+
+/* ── API key ────────────────────────────────────────────────────────── */
+function loadApiKey() {
+  const saved = localStorage.getItem(STORAGE_KEY_API) || '';
+  document.getElementById('api-key-input').value = saved;
+  updateApiStatus(saved);
+}
+
+function onApiKeyChange() {
+  const val = document.getElementById('api-key-input').value.trim();
+  localStorage.setItem(STORAGE_KEY_API, val);
+  updateApiStatus(val);
+}
+
+function updateApiStatus(key) {
+  const el = document.getElementById('api-status');
+  if (key.startsWith('sk-ant-') || key.startsWith('sk-')) {
+    el.textContent = 'Key saved';
+    el.className = 'api-status ok';
+  } else if (key.length > 0) {
+    el.textContent = 'Invalid format';
+    el.className = 'api-status bad';
+  } else {
+    el.textContent = 'No key';
+    el.className = 'api-status bad';
+  }
+}
+
+function getApiKey() {
+  return document.getElementById('api-key-input').value.trim();
+}
+
+/* ── Inventory persistence ──────────────────────────────────────────── */
+function loadInventory() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_INV);
+    if (raw) { inventory = JSON.parse(raw); return; }
+  } catch(e) {}
+  // Default starter inventory
+  inventory = [
+    { id: 1, name: 'Cheese',        emoji: '🧀', qty: 3 },
+    { id: 2, name: 'Grill Sausage', emoji: '🌭', qty: 5 },
+    { id: 3, name: 'Cucumber',      emoji: '🥒', qty: 2 },
+    { id: 4, name: 'Bread',         emoji: '🍞', qty: 4 },
+    { id: 5, name: 'Milk',          emoji: '🥛', qty: 1 },
+  ];
+}
+
+function saveInventory() {
+  localStorage.setItem(STORAGE_KEY_INV, JSON.stringify(inventory));
+}
+
+/* ── Inventory render ───────────────────────────────────────────────── */
+function renderInventory() {
+  const el = document.getElementById('inventory-list');
+  const banner = document.getElementById('low-stock-banner');
+
+  if (inventory.length === 0) {
+    el.innerHTML = '<div class="inv-empty">No products yet. Add one below or scan a photo.</div>';
+    banner.classList.remove('show');
+    return;
+  }
+
+  const hasLow = inventory.some(i => i.qty <= LOW_STOCK_THRESHOLD);
+  banner.classList.toggle('show', hasLow);
+
+  el.innerHTML = inventory.map(item => `
+    <div class="inv-item" id="inv-row-${item.id}">
+      <span class="inv-icon">${item.emoji}</span>
+      <span class="inv-name ${item.qty <= LOW_STOCK_THRESHOLD ? 'inv-low' : ''}">${escHtml(item.name)}${item.qty <= LOW_STOCK_THRESHOLD ? ' ⚠️' : ''}</span>
+      <div class="inv-qty">
+        <button class="inv-qty-btn" onclick="adjustInvQty(${item.id}, -1)">−</button>
+        <span class="inv-qty-val">${item.qty}</span>
+        <button class="inv-qty-btn" onclick="adjustInvQty(${item.id}, +1)">+</button>
+      </div>
+      <button class="inv-remove" onclick="removeInvItem(${item.id})" title="Remove">✕</button>
+    </div>
+  `).join('');
+}
+
+function adjustInvQty(id, delta) {
+  const item = inventory.find(i => i.id === id);
+  if (!item) return;
+  item.qty = Math.max(0, item.qty + delta);
+  saveInventory();
+  renderInventory();
+}
+
+function removeInvItem(id) {
+  inventory = inventory.filter(i => i.id !== id);
+  saveInventory();
+  renderInventory();
+}
+
+function addInventoryItem() {
+  const inp = document.getElementById('inp-new-product');
+  const name = inp.value.trim();
+  if (!name) return;
+
+  const catalogue = matchCatalogue(name);
+  const emoji = catalogue ? catalogue.emoji : '📦';
+
+  const existIdx = inventory.findIndex(i => i.name.toLowerCase() === name.toLowerCase());
+  if (existIdx >= 0) {
+    inventory[existIdx].qty++;
+  } else {
+    inventory.push({ id: Date.now(), name, emoji, qty: 1 });
+  }
+
+  inp.value = '';
+  saveInventory();
+  renderInventory();
+  toast(`Added "${name}" to inventory`);
+}
+
+/* ── File / Camera handling ─────────────────────────────────────────── */
+function handleFile(file) {
+  if (!file.type.startsWith('image/')) {
+    setStatus('error', 'Please upload an image file (JPG, PNG, WEBP).');
+    return;
+  }
+  if (file.size > 20 * 1024 * 1024) {
+    setStatus('error', 'Image is too large (max 20 MB). Please resize and try again.');
+    return;
+  }
+
+  stopCamera();
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    const dataUrl = e.target.result;
+    imageMimeType = file.type;
+    imageBase64 = dataUrl.split(',')[1];
+    showPreview(dataUrl);
+    clearStatus();
+  };
+  reader.readAsDataURL(file);
+}
+
+function showPreview(dataUrl) {
+  document.getElementById('preview-img').src = dataUrl;
+  document.getElementById('preview-wrap').classList.add('show');
+  document.getElementById('analyse-btn').disabled = false;
+}
+
+function clearPhoto() {
+  document.getElementById('preview-wrap').classList.remove('show');
+  document.getElementById('preview-img').src = '';
+  document.getElementById('file-input').value = '';
+  document.getElementById('analyse-btn').disabled = true;
+  imageBase64 = null;
+  imageMimeType = null;
+  clearStatus();
+}
+
+async function toggleCamera() {
+  const wrap = document.getElementById('video-wrap');
+  if (wrap.classList.contains('show')) {
+    stopCamera();
+    return;
+  }
+
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    document.getElementById('camera-video').srcObject = cameraStream;
+    wrap.classList.add('show');
+  } catch(e) {
+    setStatus('error', 'Camera access denied or unavailable. Please upload a photo instead.');
+  }
+}
+
+function stopCamera() {
+  if (cameraStream) {
+    cameraStream.getTracks().forEach(t => t.stop());
+    cameraStream = null;
+  }
+  document.getElementById('video-wrap').classList.remove('show');
+}
+
+function snapPhoto() {
+  const video = document.getElementById('camera-video');
+  const canvas = document.getElementById('snap-canvas');
+  canvas.width  = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+  imageMimeType = 'image/jpeg';
+  imageBase64 = dataUrl.split(',')[1];
+  showPreview(dataUrl);
+  stopCamera();
+}
+
+/* ── Claude API call ────────────────────────────────────────────────── */
+async function analysePhoto() {
+  if (!imageBase64) { setStatus('error', 'No image selected.'); return; }
+
+  const apiKey = getApiKey();
+  if (!apiKey) {
+    setStatus('error', 'Please enter your Anthropic API key above.');
+    return;
+  }
+
+  const btn = document.getElementById('analyse-btn');
+  btn.disabled = true;
+  setStatus('info', 'Analysing photo with Claude Vision…', true);
+
+  const catalogueList = KNOWN_PRODUCTS_CATALOGUE.map(p => p.name).join(', ');
+
+  const systemPrompt = `You are a fridge and lunch inventory scanner. Your job is to identify food products visible in the photo.
+
+Known products to look for: ${catalogueList}
+
+Respond ONLY with valid JSON in this exact format:
+{
+  "quality": "ok" | "blurry" | "dark" | "unclear",
+  "quality_message": "Optional message if quality is not ok",
+  "products": [
+    {
+      "name": "Cheese",
+      "quantity": 2,
+      "confidence": "high" | "medium" | "low",
+      "known": true
+    }
+  ]
+}
+
+Rules:
+- If the image is too blurry, poorly lit, or you cannot identify food items, set quality to "blurry", "dark", or "unclear" and return an empty products array.
+- For known products, use the exact name from the known products list.
+- For products not in the known list, set known=false and use a descriptive name.
+- Estimate quantity based on visible items (individual pieces, packages, containers).
+- Only include items you can see with at least low confidence.`;
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: 'claude-opus-4-5',
+        max_tokens: 1024,
+        system: systemPrompt,
+        messages: [{
+          role: 'user',
+          content: [{
+            type: 'image',
+            source: {
+              type: 'base64',
+              media_type: imageMimeType,
+              data: imageBase64,
+            }
+          }, {
+            type: 'text',
+            text: 'Please scan this photo and identify all food products visible.'
+          }]
+        }]
+      })
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      const msg = err?.error?.message || `API error ${response.status}`;
+      throw new Error(msg);
+    }
+
+    const data = await response.json();
+    const raw  = data.content[0].text.trim();
+
+    // Extract JSON from response (handle potential markdown code blocks)
+    const jsonMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/) || raw.match(/(\{[\s\S]*\})/);
+    const jsonStr = jsonMatch ? jsonMatch[1] : raw;
+    const result = JSON.parse(jsonStr);
+
+    handleScanResult(result);
+
+  } catch(e) {
+    console.error('Scan error:', e);
+    if (e.message.includes('401') || e.message.includes('authentication')) {
+      setStatus('error', 'Invalid API key. Please check your Anthropic API key.');
+    } else if (e.message.includes('JSON')) {
+      setStatus('error', 'Unexpected response from AI. Please try again.');
+    } else {
+      setStatus('error', `Scan failed: ${e.message}`);
+    }
+    btn.disabled = false;
+  }
+}
+
+/* ── Handle scan result ─────────────────────────────────────────────── */
+function handleScanResult(result) {
+  const btn = document.getElementById('analyse-btn');
+  btn.disabled = false;
+
+  // Quality check
+  if (result.quality && result.quality !== 'ok') {
+    const messages = {
+      blurry: 'The photo is too blurry to identify products. Please take a clearer photo.',
+      dark:   'The photo is too dark or poorly lit. Please improve lighting and try again.',
+      unclear: result.quality_message || 'The image is unclear. Please take a better photo of the fridge contents.',
+    };
+    setStatus('error', messages[result.quality] || 'Photo quality is too poor for recognition. Please try again.');
+    return;
+  }
+
+  const products = result.products || [];
+
+  if (products.length === 0) {
+    setStatus('error', 'No food products could be identified in this photo. Please try a clearer photo of the fridge contents.');
+    return;
+  }
+
+  clearStatus();
+  setStatus('success', `Found ${products.length} product${products.length !== 1 ? 's' : ''}. Please review and confirm.`);
+
+  // Build pending results with catalogue matching
+  pendingResults = products.map((p, idx) => {
+    const cat = p.known ? matchCatalogue(p.name) : null;
+    return {
+      id: idx,
+      name: p.name,
+      emoji: cat ? cat.emoji : '📦',
+      quantity: p.quantity || 1,
+      confidence: p.confidence || 'medium',
+      known: p.known !== false && !!cat,
+      manualName: '',
+      skip: false,
+    };
+  });
+
+  showModal();
+}
+
+/* ── Catalogue matching ─────────────────────────────────────────────── */
+function matchCatalogue(name) {
+  const lower = name.toLowerCase();
+  return KNOWN_PRODUCTS_CATALOGUE.find(c =>
+    c.name.toLowerCase() === lower ||
+    c.aliases.some(a => lower.includes(a) || a.includes(lower))
+  ) || null;
+}
+
+/* ── Modal ──────────────────────────────────────────────────────────── */
+function showModal() {
+  const knownCount   = pendingResults.filter(p => p.known).length;
+  const unknownCount = pendingResults.filter(p => !p.known).length;
+
+  document.getElementById('modal-title').textContent = '📋 Review Detected Products';
+  document.getElementById('modal-sub').textContent =
+    `${knownCount} known product${knownCount !== 1 ? 's' : ''} identified` +
+    (unknownCount > 0 ? `, ${unknownCount} unknown – please identify manually` : '') +
+    '. Adjust quantities and confirm to update inventory.';
+
+  renderModalItems();
+
+  document.getElementById('modal-overlay').classList.add('show');
+}
+
+function renderModalItems() {
+  const el = document.getElementById('detected-list');
+
+  el.innerHTML = pendingResults.map(item => `
+    <div class="detected-item" id="modal-item-${item.id}" style="${item.skip ? 'opacity:.4' : ''}">
+      <span class="item-icon">${item.emoji}</span>
+      <div class="item-info" style="flex:1">
+        <div class="item-name">${escHtml(item.name)}</div>
+        ${!item.known ? `
+          <input class="manual-input" type="text"
+            id="manual-${item.id}"
+            placeholder="Enter product name…"
+            value="${escHtml(item.manualName)}"
+            onchange="updateManualName(${item.id}, this.value)"
+          />
+        ` : ''}
+        <div style="margin-top:3px">
+          <span class="item-badge ${item.known ? 'badge-known' : 'badge-unknown'}">
+            ${item.known ? 'Known' : 'Unknown – needs ID'}
+          </span>
+          &nbsp;
+          <span style="font-size:10px;color:var(--muted)">Confidence: ${item.confidence}</span>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+        <div class="qty-control">
+          <button class="qty-btn" onclick="adjustPendingQty(${item.id}, -1)">−</button>
+          <span class="qty-val" id="pqty-${item.id}">${item.quantity}</span>
+          <button class="qty-btn" onclick="adjustPendingQty(${item.id}, +1)">+</button>
+        </div>
+        <button class="skip-btn" onclick="toggleSkip(${item.id})">
+          ${item.skip ? 'Undo skip' : 'Skip this item'}
+        </button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function adjustPendingQty(id, delta) {
+  const item = pendingResults.find(p => p.id === id);
+  if (!item) return;
+  item.quantity = Math.max(1, item.quantity + delta);
+  document.getElementById(`pqty-${id}`).textContent = item.quantity;
+}
+
+function updateManualName(id, val) {
+  const item = pendingResults.find(p => p.id === id);
+  if (item) {
+    item.manualName = val.trim();
+    const cat = matchCatalogue(val.trim());
+    if (cat) { item.emoji = cat.emoji; }
+  }
+}
+
+function toggleSkip(id) {
+  const item = pendingResults.find(p => p.id === id);
+  if (!item) return;
+  item.skip = !item.skip;
+  renderModalItems();
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('show');
+}
+
+/* ── Confirm update ─────────────────────────────────────────────────── */
+function confirmUpdate() {
+  const changes = [];
+  const now = new Date();
+
+  for (const item of pendingResults) {
+    if (item.skip) continue;
+
+    // Determine final name
+    let finalName = item.known ? item.name : (item.manualName || item.name);
+    let finalEmoji = item.emoji;
+
+    if (!item.known && !item.manualName) {
+      // Unknown item with no manual name – prompt once more
+      const inp = document.getElementById(`manual-${item.id}`);
+      if (inp) { inp.style.border = '2px solid var(--red)'; inp.focus(); }
+      toast('Please name all unknown products before confirming.');
+      return;
+    }
+
+    // Resolve catalogue entry
+    const cat = matchCatalogue(finalName);
+    if (cat) { finalName = cat.name; finalEmoji = cat.emoji; }
+
+    // Find or create in inventory
+    const existing = inventory.find(i => i.name.toLowerCase() === finalName.toLowerCase());
+    if (existing) {
+      existing.qty += item.quantity;
+      changes.push(`${finalEmoji} ${finalName}: +${item.quantity} (now ${existing.qty})`);
+    } else {
+      const newItem = { id: Date.now() + Math.random(), name: finalName, emoji: finalEmoji, qty: item.quantity };
+      inventory.push(newItem);
+      changes.push(`${finalEmoji} ${finalName}: added (${item.quantity})`);
+    }
+  }
+
+  if (changes.length === 0) {
+    closeModal();
+    return;
+  }
+
+  saveInventory();
+  renderInventory();
+  closeModal();
+
+  // Add to history
+  addHistory(now, changes);
+
+  setStatus('success', `Inventory updated! ${changes.length} change${changes.length !== 1 ? 's' : ''} applied.`);
+  toast('Inventory updated successfully!');
+
+  clearPhoto();
+}
+
+/* ── History ────────────────────────────────────────────────────────── */
+let scanHistory = [];
+
+function addHistory(date, changes) {
+  scanHistory.unshift({
+    time: date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+    date: date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
+    changes,
+  });
+  renderHistory();
+}
+
+function renderHistory() {
+  const el = document.getElementById('history-list');
+  if (scanHistory.length === 0) {
+    el.innerHTML = '<div class="history-empty">No scans yet this session.</div>';
+    return;
+  }
+  el.innerHTML = scanHistory.map(h => `
+    <div class="history-item">
+      <div class="h-time">${h.date} at ${h.time}</div>
+      <div class="h-changes">${h.changes.map(c => escHtml(c)).join('<br>')}</div>
+    </div>
+  `).join('');
+}
+
+/* ── Status helpers ─────────────────────────────────────────────────── */
+function setStatus(type, msg, spinner = false) {
+  const el = document.getElementById('scan-status');
+  el.className = `scan-status show ${type}`;
+  el.innerHTML = (spinner ? '<div class="spinner"></div>' : '') + `<span>${escHtml(msg)}</span>`;
+}
+
+function clearStatus() {
+  document.getElementById('scan-status').className = 'scan-status';
+  document.getElementById('scan-status').innerHTML = '';
+}
+
+/* ── Toast ──────────────────────────────────────────────────────────── */
+let toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 3200);
+}
+
+/* ── Utils ──────────────────────────────────────────────────────────── */
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/* ── Boot ───────────────────────────────────────────────────────────── */
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
