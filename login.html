@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Meatball Agent – Login</title>
+  <style>
+    /* ── Reset & Base ─────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:           #F97059;
+      --card:         #FFFDF4;
+      --card-alt:     #FFF8E7;
+      --brown-dark:   #4A2C0A;
+      --brown-mid:    #7B3F00;
+      --brown-light:  #C17F24;
+      --cream:        #F5E6C8;
+      --green:        #5A8A3C;
+      --green-light:  #A8D878;
+      --red:          #D94F3B;
+      --text:         #2E1A0E;
+      --muted:        #9E7A56;
+      --shadow:       0 4px 16px rgba(0,0,0,.15);
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      color: var(--text);
+    }
+
+    h1, h2, h3 { font-weight: 800; letter-spacing: .02em; }
+
+    /* ── Login Card ───────────────────────────────────────────────── */
+    .login-wrapper {
+      width: 100%;
+      max-width: 420px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* ── Brand Header ─────────────────────────────────────────────── */
+    .brand {
+      text-align: center;
+    }
+
+    .meatball-icon {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 38% 35%, #D4822A, #A0521A 45%, #5C2D0A);
+      box-shadow: 0 6px 20px rgba(74,44,10,.45), inset 0 -4px 8px rgba(0,0,0,.25);
+      margin: 0 auto 16px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .meatball-icon::after {
+      content: '';
+      position: absolute;
+      top: 14px;
+      left: 20px;
+      width: 22px;
+      height: 14px;
+      border-radius: 50%;
+      background: rgba(255,255,255,.18);
+      transform: rotate(-30deg);
+    }
+
+    .brand h1 {
+      font-size: 1.75rem;
+      color: var(--card);
+      text-shadow: 0 2px 6px rgba(0,0,0,.2);
+    }
+
+    .brand p {
+      color: rgba(255,253,244,.75);
+      font-size: .9rem;
+      margin-top: 4px;
+    }
+
+    /* ── Card ─────────────────────────────────────────────────────── */
+    .card {
+      background: var(--card);
+      border-radius: 24px;
+      padding: 32px;
+      box-shadow: var(--shadow);
+    }
+
+    .card h2 {
+      font-size: 1.2rem;
+      color: var(--brown-dark);
+      margin-bottom: 24px;
+      text-align: center;
+    }
+
+    /* ── Form ─────────────────────────────────────────────────────── */
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 18px;
+    }
+
+    .form-group:last-of-type {
+      margin-bottom: 24px;
+    }
+
+    label {
+      font-size: .85rem;
+      font-weight: 700;
+      color: var(--brown-mid);
+      letter-spacing: .03em;
+      text-transform: uppercase;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid var(--cream);
+      border-radius: 12px;
+      font-family: inherit;
+      font-size: 1rem;
+      color: var(--text);
+      background: var(--card-alt);
+      transition: border-color .2s, box-shadow .2s;
+      outline: none;
+    }
+
+    input::placeholder {
+      color: var(--muted);
+      opacity: .7;
+    }
+
+    input:focus {
+      border-color: var(--brown-light);
+      box-shadow: 0 0 0 3px rgba(193,127,36,.18);
+    }
+
+    input.invalid {
+      border-color: var(--red);
+      box-shadow: 0 0 0 3px rgba(217,79,59,.15);
+    }
+
+    .field-error {
+      font-size: .8rem;
+      color: var(--red);
+      font-weight: 600;
+      display: none;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .field-error.visible {
+      display: flex;
+    }
+
+    /* ── Alert Banner ─────────────────────────────────────────────── */
+    .alert {
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-size: .9rem;
+      font-weight: 600;
+      display: none;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .alert.visible {
+      display: flex;
+    }
+
+    .alert.error {
+      background: #FDE8E6;
+      color: var(--red);
+      border: 1.5px solid rgba(217,79,59,.3);
+    }
+
+    .alert.success {
+      background: #EAF5E3;
+      color: var(--green);
+      border: 1.5px solid rgba(90,138,60,.3);
+    }
+
+    /* ── Submit Button ────────────────────────────────────────────── */
+    .btn-login {
+      width: 100%;
+      padding: 18px;
+      border: none;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #6abf4b, #3d7a26);
+      color: #FFFDF4;
+      font-family: inherit;
+      font-size: 1.15rem;
+      font-weight: 800;
+      letter-spacing: .04em;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(40,90,20,.35);
+      transition: opacity .2s, transform .1s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-login:hover {
+      opacity: .92;
+    }
+
+    .btn-login:active {
+      transform: scale(.98);
+    }
+
+    .btn-login:disabled {
+      opacity: .6;
+      cursor: not-allowed;
+    }
+
+    /* ── Spinner ──────────────────────────────────────────────────── */
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2.5px solid rgba(255,253,244,.4);
+      border-top-color: #FFFDF4;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      display: none;
+    }
+
+    .btn-login.loading .spinner { display: block; }
+    .btn-login.loading .btn-text { display: none; }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* ── Footer note ──────────────────────────────────────────────── */
+    .footer-note {
+      text-align: center;
+      font-size: .78rem;
+      color: rgba(255,253,244,.65);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="login-wrapper">
+
+    <!-- Brand -->
+    <div class="brand">
+      <div class="meatball-icon"></div>
+      <h1>Meatball Agent</h1>
+      <p>Team Lunch Dashboard</p>
+    </div>
+
+    <!-- Login Card -->
+    <div class="card">
+      <h2>Welcome back 👋</h2>
+
+      <!-- Global alert banner -->
+      <div class="alert error" id="alertBanner" role="alert" aria-live="polite">
+        <span id="alertIcon">⚠️</span>
+        <span id="alertMsg"></span>
+      </div>
+
+      <form id="loginForm" novalidate>
+
+        <!-- Username -->
+        <div class="form-group">
+          <label for="username">Username</label>
+          <input
+            type="text"
+            id="username"
+            name="username"
+            placeholder="Enter your username"
+            autocomplete="username"
+            aria-describedby="usernameError"
+          />
+          <span class="field-error" id="usernameError" role="alert">
+            ⚠ Username is required.
+          </span>
+        </div>
+
+        <!-- Password -->
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            placeholder="Enter your password"
+            autocomplete="current-password"
+            aria-describedby="passwordError"
+          />
+          <span class="field-error" id="passwordError" role="alert">
+            ⚠ Password is required.
+          </span>
+        </div>
+
+        <button type="submit" class="btn-login" id="loginBtn">
+          <span class="spinner"></span>
+          <span class="btn-text">Log In</span>
+        </button>
+
+      </form>
+    </div>
+
+    <p class="footer-note">🍝 Meatball Agent &copy; 2025</p>
+  </div>
+
+  <script>
+    /* ── Constants ──────────────────────────────────────────────────── */
+    const VALID_USERNAME  = 'admin';
+    const VALID_PASSWORD  = 'admin123';
+    const AUTH_KEY        = 'meatball_auth_v1';
+    const DASHBOARD_URL   = 'budget_tracker.html';
+
+    /* ── Element refs ───────────────────────────────────────────────── */
+    const form          = document.getElementById('loginForm');
+    const usernameInput = document.getElementById('username');
+    const passwordInput = document.getElementById('password');
+    const usernameError = document.getElementById('usernameError');
+    const passwordError = document.getElementById('passwordError');
+    const alertBanner   = document.getElementById('alertBanner');
+    const alertMsg      = document.getElementById('alertMsg');
+    const loginBtn      = document.getElementById('loginBtn');
+
+    /* ── If already authenticated, skip straight to dashboard ──────── */
+    if (localStorage.getItem(AUTH_KEY) === 'true') {
+      window.location.replace(DASHBOARD_URL);
+    }
+
+    /* ── Helpers ────────────────────────────────────────────────────── */
+    function clearFieldError(input, errorEl) {
+      input.classList.remove('invalid');
+      errorEl.classList.remove('visible');
+    }
+
+    function showFieldError(input, errorEl) {
+      input.classList.add('invalid');
+      errorEl.classList.add('visible');
+    }
+
+    function showAlert(message, type = 'error') {
+      alertBanner.className = `alert ${type} visible`;
+      alertMsg.textContent  = message;
+      document.getElementById('alertIcon').textContent = type === 'success' ? '✅' : '⚠️';
+    }
+
+    function hideAlert() {
+      alertBanner.classList.remove('visible');
+    }
+
+    function setLoading(state) {
+      loginBtn.disabled = state;
+      loginBtn.classList.toggle('loading', state);
+    }
+
+    /* ── Clear field errors on input ───────────────────────────────── */
+    usernameInput.addEventListener('input', () => {
+      clearFieldError(usernameInput, usernameError);
+      hideAlert();
+    });
+
+    passwordInput.addEventListener('input', () => {
+      clearFieldError(passwordInput, passwordError);
+      hideAlert();
+    });
+
+    /* ── Form submission ────────────────────────────────────────────── */
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      hideAlert();
+
+      const username = usernameInput.value.trim();
+      const password = passwordInput.value;
+
+      /* ── Inline validation (required fields) ─────────────────────── */
+      let hasError = false;
+
+      if (!username) {
+        showFieldError(usernameInput, usernameError);
+        hasError = true;
+      } else {
+        clearFieldError(usernameInput, usernameError);
+      }
+
+      if (!password) {
+        showFieldError(passwordInput, passwordError);
+        hasError = true;
+      } else {
+        clearFieldError(passwordInput, passwordError);
+      }
+
+      if (hasError) return;
+
+      /* ── Credential check ─────────────────────────────────────────── */
+      setLoading(true);
+
+      // Brief simulated delay for UX realism
+      setTimeout(() => {
+        if (username === VALID_USERNAME && password === VALID_PASSWORD) {
+          showAlert('Login successful! Redirecting…', 'success');
+          localStorage.setItem(AUTH_KEY, 'true');
+          setTimeout(() => {
+            window.location.href = DASHBOARD_URL;
+          }, 700);
+        } else {
+          setLoading(false);
+          showAlert('Incorrect username or password. Please try again.');
+          passwordInput.value = '';
+          passwordInput.focus();
+        }
+      }, 400);
+    });
+  </script>
+</body>
+</html>
